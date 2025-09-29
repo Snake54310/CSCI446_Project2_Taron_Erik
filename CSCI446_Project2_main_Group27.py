@@ -148,6 +148,19 @@ def main(GROUP_ID, PUZZLE_PATH):
     #print(booleanStates) # working correctly here
     #print(holesWompuses) # working correctly here
     
+    # NOTE: we still need to extract relevant
+    # tuple-formed literals from these initial visualization-style data structures
+    # BUT THIS SHOULD BE DONE INSIDE THE RECURSION
+    
+    # General structure: visual map => literals => logic pipeline => visual map => literals => ...
+    # NOTE: we will likely want an object to store our information in 
+    # so that it can be better tracked inside recursion
+    
+    # For FOL recursion, base-cases (to return up tree) will be:
+    # 1. if the query cell safe index is set TRUE
+    # 2. if the query cell unsafe index is set TRUE
+    # 3. if there is nowhere else to go logically via FOL
+    
     
     # output stuff
     if (booleanStates[0][query[0]][query[1]] == True): 
