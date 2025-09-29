@@ -83,10 +83,18 @@ def main(GROUP_ID, PUZZLE_PATH):
     booleanStates = createMap(fileInfo)
     
     query_arrows = retrieveOtherInfo(fileInfo)
-    
-    deduction = "RISKY" 
-    
-    
+    query = query_arrows[0]
+    arrows = query_arrows[1]
     clauses_array = [] # placeholder
+    
+    
+    # output stuff
+    if (booleanStates[0][query[0]][query[1]] == True): 
+        deduction = "SAFE" # if cell is safe, then it's safe
+    elif (booleanStates[1][query[0]][query[1]] == True):
+        deduction = "UNSAFE" # if cell is unsafe, then it's unsafe
+    else: 
+        deduction = "RISKY" # if we don't know, then it's risky
+    
     
     saveOutput(deduction, clauses_array, GROUP_ID, PUZZLE_PATH)
