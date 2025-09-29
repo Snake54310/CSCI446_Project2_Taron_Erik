@@ -4,6 +4,7 @@ import os
 import random 
 import sys
 import re
+import copy as cp
 
 def fileImport(fileName): # brings file into program as str numpy array
     
@@ -43,9 +44,6 @@ def createMap(fileInfo): # initializes a properly sized array representing known
         booleanStates[0][row][col] = True # cells 'visited' are always safe 
         # (part of knowledge base)
         
-    
-    # print(booleanStates)
-    
     return booleanStates
 
 def retrieveOtherInfo(fileInfo):
@@ -61,7 +59,64 @@ def retrieveOtherInfo(fileInfo):
     query_arrows = (query, arrows)
     return query_arrows
     
-
+def createHolesWompuses(booleanStates):
+    # creates an initial array of:
+    # 0) there could be a hole 1) there could be a wompus
+    # 2) there is a hole 3) there is a wompus
+    # will likely need changes to conform to the project requirements, but it 
+    # might be a useful draft
+    # maybe 'part of knowledge base'
+    arraysShape = booleanStates.shape
+    holesWompusesZeros = np.zeros(arraysShape, dtype=int)
+    holesWompuses = holesWompusesZeros.astype(bool)
+    
+    for row in range(arraysShape[1]):
+        for col in range(arraysShape[2]):
+            if (booleanStates[0][row][col] != True):
+                # if the cell is not known to be safe, there could be 
+                # a hole or a wompus (knowledge base)
+                holesWompuses[0][row][col] = True
+                holesWompuses[1][row][col] = True
+    
+    
+    for row in range(arraysShape[1]):
+        for col in range(arraysShape[2]):
+            if (booleanStates[0][row][col] == True): # If cell is safe and visited
+                # (all known-safe cells have been visited at this point in the code)
+                # check whether there is a stench or a breeze: 
+                # if there is no breeze, there is no hole in adjacent cells
+                # (knowledge base)
+                if (booleanStates[2][row][col] != True):
+                    if (row + 1 < arraysShape[1]): # if row 'below' exists in map
+                        holesWompuses[0][row + 1][col] = False
+                    if (row - 1 > -1): # if row 'above' exists in map
+                        holesWompuses[0][row - 1][col] = False
+                    if (col + 1 < arraysShape[1]): # if column 'below' exists in map
+                        holesWompuses[0][row][col + 1] = False
+                    if (col - 1 > -1): # if column 'above' exists in map
+                        holesWompuses[0][row][col - 1] = False
+                
+                # if there is no stench, there is no wompus in adjacent cells
+                # (knowledge base)
+                if (booleanStates[3][row][col] != True):
+                    if (row + 1 < arraysShape[1]): # if row 'below' exists in map
+                        holesWompuses[1][row + 1][col] = False
+                    if (row - 1 > -1): # if row 'above' exists in map
+                        holesWompuses[1][row - 1][col] = False
+                    if (col + 1 < arraysShape[1]): # if column 'below' exists in map
+                        holesWompuses[1][row][col + 1] = False
+                    if (col - 1 > -1): # if column 'above' exists in map
+                        holesWompuses[1][row][col - 1] = False
+    # the next step (logically) would be to say that "if there is 
+    # no chance of wompus and there is no chance of hole, then the cell is safe
+    # Likely part of knowledge base, but should be implemented in recursive FOL cycle
+    
+                
+    return holesWompuses
+    
+    
+    
+    
 def saveOutput(deduction, clauses_array, GROUP_ID, PUZZLE_PATH): # saves solved puzzle to output file
     fileName = GROUP_ID + "_" + PUZZLE_PATH[-11:-4] + ".txt"
     writeString = ""
@@ -83,9 +138,15 @@ def main(GROUP_ID, PUZZLE_PATH):
     booleanStates = createMap(fileInfo)
     
     query_arrows = retrieveOtherInfo(fileInfo)
+    #print(query_arrows) # working correctly here
+    
     query = query_arrows[0]
     arrows = query_arrows[1]
     clauses_array = [] # placeholder
+
+    holesWompuses = createHolesWompuses(booleanStates)
+    #print(booleanStates) # working correctly here
+    #print(holesWompuses) # working correctly here
     
     
     # output stuff
