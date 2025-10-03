@@ -5,6 +5,7 @@ import random
 import sys
 import re
 import copy as cp
+from Knowledge import Knowledge
 
 def fileImport(fileName): # brings file into program as str numpy array
     
@@ -15,9 +16,9 @@ def createMap(fileInfo): # initializes a properly sized array representing known
     puzzleSize = fileInfo[0][6:]
     puzzleDimensions = puzzleSize.split('x')
     puzzleRC = int(puzzleDimensions[0])
-    # this boolean states array constains booleans variables on the following data: 
-    # 0) safe, 1) unsafe, 2) breeze, 3) stench
-    booleanStatesZeros = np.zeros((4, puzzleRC, puzzleRC), dtype=int);
+    # this boolean states array contains booleans variables on the following data: 
+    # 0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given
+    booleanStatesZeros = np.zeros((5, puzzleRC, puzzleRC), dtype=int);
     booleanStates = booleanStatesZeros.astype(bool)
     
     for location in fileInfo[3: -2]: # for every given location (cell)
@@ -42,6 +43,7 @@ def createMap(fileInfo): # initializes a properly sized array representing known
         # stench status of cell is
         booleanStates[3][row][col] = stenchStatus
         booleanStates[0][row][col] = True # cells 'visited' are always safe 
+        booleanStates[4][row][col] = True
         # (part of knowledge base)
         
     return booleanStates
@@ -70,6 +72,7 @@ def createHolesWompuses(booleanStates):
     holesWompusesZeros = np.zeros(arraysShape, dtype=int)
     holesWompuses = holesWompusesZeros.astype(bool)
     
+    ''' ALL OF THESE OPERATIONS MUST TAKE PLACE IN FOL
     for row in range(arraysShape[1]):
         for col in range(arraysShape[2]):
             if (booleanStates[0][row][col] != True):
@@ -110,17 +113,17 @@ def createHolesWompuses(booleanStates):
     # the next step (logically) would be to say that "if there is 
     # no chance of wompus and there is no chance of hole, then the cell is safe
     # Likely part of knowledge base, but should be implemented in recursive FOL cycle
-    
+    '''
                 
     return holesWompuses
     
     
     
     
-def saveOutput(deduction, clauses_array, GROUP_ID, PUZZLE_PATH): # saves solved puzzle to output file
+def saveOutput(deduction, clausesArray, GROUP_ID, PUZZLE_PATH): # saves solved puzzle to output file
     fileName = GROUP_ID + "_" + PUZZLE_PATH[-11:-4] + ".txt"
     writeString = ""
-    for clause in clauses_array:
+    for clause in clausesArray:
         writeString += clause
         writeString += "\n"
   
@@ -142,7 +145,7 @@ def main(GROUP_ID, PUZZLE_PATH):
     
     query = query_arrows[0]
     arrows = query_arrows[1]
-    clauses_array = [] # placeholder
+    clausesArray = [] # placeholder
 
     holesWompuses = createHolesWompuses(booleanStates)
     #print(booleanStates) # working correctly here
@@ -171,4 +174,4 @@ def main(GROUP_ID, PUZZLE_PATH):
         deduction = "RISKY" # if we don't know, then it's risky
     
     
-    saveOutput(deduction, clauses_array, GROUP_ID, PUZZLE_PATH)
+    saveOutput(deduction, clausesArray, GROUP_ID, PUZZLE_PATH)
