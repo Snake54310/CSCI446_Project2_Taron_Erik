@@ -42,8 +42,8 @@ def createMap(fileInfo): # initializes a properly sized array representing known
         booleanStates[2][row][col] = breezeStatus
         # stench status of cell is
         booleanStates[3][row][col] = stenchStatus
-        booleanStates[0][row][col] = True # cells 'visited' are always safe 
-        booleanStates[4][row][col] = True
+        # booleanStates[0][row][col] = True # cells 'visited' are always safe # maybe delete 
+        booleanStates[4][row][col] = True # track given 
         # (part of knowledge base)
         
     return booleanStates
