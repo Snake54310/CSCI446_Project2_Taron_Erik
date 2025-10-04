@@ -320,7 +320,8 @@ class Knowledge:
             # c. Expect it to return True (result is step 2), otherwise result is step 3
         # 2. If function holds, update map accordingly
         # 3. if function does not hold, break because we have found a contradiction.
-        # 4. return result of function (if we make it here, it's the target value)
+        # 4. return result of function (if we make it here, it's the target value) -- Our tuple will be changed to this value
+        # NOTE: DUE TO THE 3 RETURN CASES (containsVar, FAILURE, SUCCESS), we will return an integer 0, -1, or 1 instead of a boolean 
     
     
     
