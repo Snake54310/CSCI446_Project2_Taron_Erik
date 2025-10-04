@@ -257,6 +257,16 @@ class Knowledge:
     
     
         # KNOWLEDGE BASE OPERATIONS METHODS -------------------------------------------------
+    def cellNotUnsafe(self, cell): # if this causes a contradiction, then cell must be Unsafe -- do not append to the clausesQueue within 
+        # the same knowledge base as cellNotUnsafe
+        addKnowledge = ('IU', cell, False)
+        return addKnowledge
+        
+    def cellNotSafe(self, cell): # if this causes a contradiction, then cell must be Safe -- do not append to the clausesQueue within 
+        # the same knowledge base as cellNotUnsafe
+        addKnowledge = ('IS', cell, False)
+        return addKnowledge
+        
     def noStenchNeighbor(self, cell): # if cell is adjacent to a given cell without a stench, then cell does not have wompus
         row = cell[0]
         column = cell[1]
@@ -330,13 +340,18 @@ class Knowledge:
     # END FUNCTION EVALUATION METHODS -------------------------------------------------
     
     
+    # UNIFICATION METHODS -------------------------------------------------
     
     
     
+    # END UNIFICATION METHODS -------------------------------------------------
+    
+    
+    # RESOLUTION METHODS -------------------------------------------------
     
     
     
-    
+    # END RESOLUTION METHODS -------------------------------------------------
     
     
     
