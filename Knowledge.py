@@ -7,11 +7,16 @@ import re
 import copy as cp
 
 class Knowledge:
-    def __init__(self, booleanStates, holesWompuses):
+    def __init__(self, booleanStates, holesWompuses, arrows, query, test):
         self.booleanStates = cp.copy(booleanStates); #  this boolean states array contains 
         # booleans variables on the following data: 
         # 0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given
         
+        self.arrows = arrows # number of potential wompuses
+        
+        self.query = query # cell we are testing
+        
+        self.test = test # integer indicating to test not unsafe (0) or not safe (1)
         
         self.holesWompuses = cp.copy(holesWompuses); #     # creates an initial array of:
         # 0) there could be a hole 1) there could be a wompus
@@ -26,19 +31,8 @@ class Knowledge:
         
         self.clausesArray = [] # record created clauses (strings)
         
-        self.clausesQueue = () # clauses to be unified/resolved/evaluated
+        self.clausesQueue = () # clauses to be unified/resolved/evaluated, combined with unification (if possible) or 'and-ing' together
         
-        '''
-        holesWompusesConstantsZeros = np.zeros(hazardsShape, dtype=int)
-        self.holesWompusesConstants = holesWompusesConstantsZeros.astype(bool) # track all values that are constants
-        
-        booleanStatesConstantsZeros = np.zeros(arraysShape, dtype=int)
-        self.booleanStatesConstants = booleanStatesConstantsZeros.astype(bool) # track all values that are constants
-        
-        for row in self.rows:
-            for c in self.columns:
-                self.booleanStatesConstants[4][row][column] = True # given state always constant
-        '''
         
         # EXPLANATION OF VARIABLES AND CONSTANTS:
         # (A state refers to any boolean value)
@@ -247,7 +241,26 @@ class Knowledge:
     def setHasWompus(self, cell):
         row = cell[0]
         column = cell[1]
+        self.holesWompuses[3][row][column] = True
+        return
     
+    def setHasHole(self, cell):
+        row = cell[0]
+        column = cell[1]
+        self.holesWompuses[2][row][column] = True
+        return
+        
+    def setCellCouldWompus(self, cell):
+        row = cell[0]
+        column = cell[1]
+        self.holesWompuses[1][row][column] = False
+        return
+    
+    def setCellCouldHole(self, cell):
+        row = cell[0]
+        column = cell[1]
+        self.holesWompuses[0][row][column] = False
+        return
     
     
     
@@ -257,9 +270,24 @@ class Knowledge:
     
     
         # KNOWLEDGE BASE OPERATIONS METHODS -------------------------------------------------
+    def initializeKnowledge(self): # create initial tuple containing all of knowledge base
+        for row in self.rows:
+            for column in self.columns:
+                cell = [row, column]
+                self.clausesQueue += self.noStenchNeighbor(cell)
+                self.clausesQueue += self.noBreezeNeighbor(cell)
+                # self.clausesQueue += ...
+                # ...
+        if (self.test == 0):
+            self.clausesQueue += (self.cellNotUnsafe(self.query),)
+        if (self.test == 1):
+            self.clausesQueue += (self.cellNotSafe(self.query),)
+        return
+        
     def cellNotUnsafe(self, cell): # if this causes a contradiction, then cell must be Unsafe -- do not append to the clausesQueue within 
         # the same knowledge base as cellNotUnsafe
         addKnowledge = ('IU', cell, False)
+        # addKnowledge = ('NOT', ('IU', cell, True), True)
         return addKnowledge
         
     def cellNotSafe(self, cell): # if this causes a contradiction, then cell must be Safe -- do not append to the clausesQueue within 
@@ -267,48 +295,48 @@ class Knowledge:
         addKnowledge = ('IS', cell, False)
         return addKnowledge
         
-    def noStenchNeighbor(self, cell): # if cell is adjacent to a given cell without a stench, then cell does not have wompus
+    def noStenchNeighbor(self, cell): # if cell is adjacent to a given cell without a stench, then cell could not have wompus
         row = cell[0]
         column = cell[1]
         
         addKnowledge = ()
         if (row + 1 < self.rows):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row + 1, column], False), ('IG', [row + 1, column], True), True), ('IW', cell, False)))
+            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row + 1, column], False), ('IG', [row + 1, column], True), True), ('CW', cell, False)),)
             addKnowledge = addKnowledge1
             
         if (row - 1 >= 0):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row - 1, column], False), ('IG', [row - 1, column], True), True), ('IW', cell, False)))
+            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row - 1, column], False), ('IG', [row - 1, column], True), True), ('CW', cell, False)),)
             addKnowledge = addKnowledge1
                 
         if (column + 1 < self.columns):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column + 1], False), ('IG', [row, column + 1], True), True), ('IW', cell, False)))
+            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column + 1], False), ('IG', [row, column + 1], True), True), ('CW', cell, False)),)
             addKnowledge = addKnowledge1
                 
         if (column - 1 >= 0):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column - 1], False), ('IG', [row, column - 1], True), True), ('IW', cell, False)))
+            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column - 1], False), ('IG', [row, column - 1], True), True), ('CW', cell, False)),)
             addKnowledge = addKnowledge1     
         
         return addKnowledge
     
-    def noBreezeNeighbor(self, cell): # if cell is adjacent to a given cell without a breeze, then cell does not have hole
+    def noBreezeNeighbor(self, cell): # if cell is adjacent to a given cell without a breeze, then cell could not have hole
         row = cell[0]
         column = cell[1]
         
         addKnowledge = ()
         if (row + 1 < self.rows):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row + 1, column], False), ('IG', [row + 1, column], True), True), ('IH', cell, False)))
+            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row + 1, column], False), ('IG', [row + 1, column], True), True), ('CH', cell, False)),)
             addKnowledge = addKnowledge1
             
         if (row - 1 >= 0):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row - 1, column], False), ('IG', [row - 1, column], True), True), ('IH', cell, False)))
+            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row - 1, column], False), ('IG', [row - 1, column], True), True), ('CH', cell, False)),)
             addKnowledge = addKnowledge1
                 
         if (column + 1 < self.columns):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column + 1], False), ('IG', [row, column + 1], True), True), ('IH', cell, False)))
+            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column + 1], False), ('IG', [row, column + 1], True), True), ('CH', cell, False)),)
             addKnowledge = addKnowledge1
                 
         if (column - 1 >= 0):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column - 1], False), ('IG', [row, column - 1], True), True), ('IH', cell, False)))
+            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column - 1], False), ('IG', [row, column - 1], True), True), ('CH', cell, False)),)
             addKnowledge = addKnowledge1     
         
         return addKnowledge
@@ -318,20 +346,7 @@ class Knowledge:
     # END KNOWLEDGE BASE OPERATIONS METHODS -------------------------------------------------
     
     
-    # FUNCTION EVALUATION METHODS -------------------------------------------------
-    
-    def evaluateFunction(self, statementTuple):
-        # CODE CYCLE:
-        
-        # 0. If there is variable, do not evaluate the function
-        # 1. Evaluate Function
-            # a. Select function based upon first element of statement tuple
-            # b. Run function with correct number of elements, and the target value
-            # c. Expect it to return True (result is step 2), otherwise result is step 3
-        # 2. If function holds, update map accordingly
-        # 3. if function does not hold, break because we have found a contradiction.
-        # 4. return result of function (if we make it here, it's the target value) -- Our tuple will be changed to this value
-        # NOTE: DUE TO THE 3 RETURN CASES (containsVar, FAILURE, SUCCESS), we will return an integer 0, -1, or 1 instead of a boolean 
+    # FUNCTION EVALUATION METHODS ------------------------------------------------- 
     
     
     
@@ -348,6 +363,116 @@ class Knowledge:
     
     
     # RESOLUTION METHODS -------------------------------------------------
+    def resolveFunction(self, statementTuple): # start with this for all predicates, then unify. 
+        
+        newStatementTuple = ()
+        
+        for element in statementTuple:
+            if (type(element) == tuple):
+                resolvedElement = self.resolveFunction(element)
+            else:
+                resolvedElement = element
+            
+            newStatementTuple += (resolvedElement,)
+        
+        for element in statementTuple:
+            if (type(element) == tuple):
+                return newStatementTuple # if, following recursion, tuple still contains unresolved tuples, then return without 
+                # attempting further resolution
+        
+        result = self.evaluateFunction(statementTuple)
+        
+        if (result == 0):
+            return statementTuple # if we cannot resolve a variable, do not resolve 
+        
+        if (result == 1):
+            return True # if result matches target, return True
+        
+        return False # if result does not match target, return False
+            
+        
+        
+        
+    
+    def evaluateFunction(self, statementTuple): # NOTE: FAILURE SIMPLY RESULTS IN A FALSE VALUE INSIDE resolveFunction METHOD
+        predicate = statementTuple[0]
+        
+        if (predicate == 'NOT'):
+            toEvaluate = statementTuple[1]
+            desiredOutcome = statementTuple[2]
+            if isConstant(toEvaluate): # if value is constant, return method Value
+                result = self.notMethod(toEvaluate, desiredOutcome)
+                if (result):
+                    return 1 # if the result is correct, return 1
+                return -1 # if the result is incorrect, return -1 (failure)
+            else: # if value is not constant, try both True and False values (basically, always remains as a variable here, but more code
+                # is explanatory
+                evaluateFalse = False
+                evaluateTrue = False
+                resultTrue = self.notMethod(True, desiredOutcome)
+                resultFalse = self.notMethod(False, desiredOutcome)
+                if (resultTrue and resultFalse): # technically impossible, but writing for clarity
+                    return 0 # result remains a variable, do not simplify
+                elif (resultTrue):
+                    return 0 # if result is unknown, return 0
+                elif (resultFalse):
+                    return 0 # if result is unknown, return 0
+                return -1 # if the result is incorrect, return -1 (failure)
+            
+        if (predicate == 'CW'):
+            toEvaluate = statementTuple[1]
+            desiredOutcome = statementTuple[2]
+            
+            result = self.couldWompus(toEvaluate, desiredOutcome) # variable if current value of couldWompus in cell is True
+            
+            if (desiredOutcome == True and result == True): # if value is a variable and is True
+                return 0 # if the result is a variable and true, return 0 to keep as variable
+            elif (desiredOutcome == False and result == False):
+                setCellCouldWompus(toEvaluate) # is no longer constant, must be false (in future, this is evaluated as constant)
+                return 1 # if result has become constant and is now true, return 1
+            elif (result): # if the value is constant and correct, then return 1
+                return 1 # if the result is correct and True, return 1
+            else: # if the value is constant and incorrect, return failure
+                return -1
+            
+        if (predicate == 'CH'):
+            toEvaluate = statementTuple[1]
+            desiredOutcome = statementTuple[2]
+            
+            result = self.couldHole(toEvaluate, desiredOutcome) # variable if current value of couldWompus in cell is True
+            
+            if (desiredOutcome == True and result == True): # if value is a variable and is True
+                return 0 # if the result is a variable and true, return 0 to keep as variable
+            elif (desiredOutcome == False and result == False):
+                setCellCouldHole(toEvaluate) # is no longer constant, must be false (in future, this is evaluated as constant)
+                return 1 # if result has become constant and is now true, return 1
+            elif (result): # if the value is constant and correct, then return 1
+                return 1 # if the result is correct and True, return 1
+            else: # if the value is constant and incorrect, return failure
+                return -1
+            
+        if (predicate == 'IG'):
+            toEvaluate = statementTuple[1]
+            desiredOutcome = statementTuple[2]
+            
+            # we know this is a constant because given values are constant:
+            result = self.isGiven(toEvaluate, desiredOutcome)
+            if (result):
+                return 1 # if the result is correct , return 1
+            return -1 # if the result is incorrect, return -1 (failure)
+            
+            
+        # CODE CYCLE:
+        
+        # 0. If there is variable that cannot be turned into a constant, do not evaluate the function (return 0)
+        # 1. Evaluate Function
+            # a. Select function based upon first element of statement tuple
+            # b. Run function with correct number of elements, and the target value
+            # c. Expect it to return True (result is step 2), otherwise result is step 3
+        # 2. If function holds, update map accordingly (only needed if variable was forced to become a constant)
+        # 3. if function does not hold, return -1. This tuple's value is now resolved to False
+        # 4. return 1 -- Our tuple will be resolved to True
+        # NOTE: DUE TO THE 3 RETURN CASES (FAILURE, contains_var, SUCCESS), we will return an integer -1, 0, or 1 instead of a boolean
     
     
     
