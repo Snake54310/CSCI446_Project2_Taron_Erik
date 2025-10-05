@@ -31,7 +31,7 @@ class Knowledge:
         
         self.clausesArray = [] # record created clauses (strings)
         
-        self.clausesQueue = () # clauses to be unified/resolved/evaluated, combined with unification (if possible) or 'and-ing' together
+        self.clausesQueue = [] # clauses to be unified/resolved/evaluated, combined with unification (if possible) or 'and-ing' together
         
         
         # EXPLANATION OF VARIABLES AND CONSTANTS:
@@ -60,7 +60,8 @@ class Knowledge:
         
         # OUTPUT METHODS -------------------------------------------------
     def getClausesArray(self):
-        return self.self.clausesArray
+        return self.clausesArray
+    
         # END OUTPUT METHODS -------------------------------------------------
     
         # GET-DATA METHODS -------------------------------------------------
@@ -177,7 +178,7 @@ class Knowledge:
             isWompus = True
         return (isWompus == Target)
         
-    def isHole(self, cell, Target): # CODE: IH
+    def isHole(self, cell, Target): # CODE: 'IH'
         row = cell[0]
         column = cell[1]
         isHole = False
@@ -185,7 +186,7 @@ class Knowledge:
             isHole = True
         return (isHole == Target)
     
-    def isConstant(self, operation, element): # no code likely needed -- called during unification and resolution
+    def isConstant(self, element): # no code likely needed -- called during unification and resolution
         
         if (element == True or element == False): # if it is a constant True or False
             return True
@@ -279,9 +280,12 @@ class Knowledge:
                 # self.clausesQueue += ...
                 # ...
         if (self.test == 0):
-            self.clausesQueue += (self.cellNotUnsafe(self.query),)
+            self.clausesQueue += [self.cellNotUnsafe(self.query)]
         if (self.test == 1):
-            self.clausesQueue += (self.cellNotSafe(self.query),)
+            self.clausesQueue += [self.cellNotSafe(self.query)]
+            
+        for i in self.clausesQueue:
+            self.clausesArray.append(str(i)) # add every clause to clauses Queue records string
         return
         
     def cellNotUnsafe(self, cell): # if this causes a contradiction, then cell must be Unsafe -- do not append to the clausesQueue within 
@@ -299,21 +303,21 @@ class Knowledge:
         row = cell[0]
         column = cell[1]
         
-        addKnowledge = ()
+        addKnowledge = []
         if (row + 1 < self.rows):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row + 1, column], False), ('IG', [row + 1, column], True), True), ('CW', cell, False)),)
+            addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('HS', [row + 1, column], False), ('IG', [row + 1, column], True), True), ('CW', cell, False))]
             addKnowledge = addKnowledge1
             
         if (row - 1 >= 0):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row - 1, column], False), ('IG', [row - 1, column], True), True), ('CW', cell, False)),)
+            addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('HS', [row - 1, column], False), ('IG', [row - 1, column], True), True), ('CW', cell, False))]
             addKnowledge = addKnowledge1
                 
         if (column + 1 < self.columns):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column + 1], False), ('IG', [row, column + 1], True), True), ('CW', cell, False)),)
+            addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('HS', [row, column + 1], False), ('IG', [row, column + 1], True), True), ('CW', cell, False))]
             addKnowledge = addKnowledge1
                 
         if (column - 1 >= 0):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column - 1], False), ('IG', [row, column - 1], True), True), ('CW', cell, False)),)
+            addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('HS', [row, column - 1], False), ('IG', [row, column - 1], True), True), ('CW', cell, False))]
             addKnowledge = addKnowledge1     
         
         return addKnowledge
@@ -324,19 +328,19 @@ class Knowledge:
         
         addKnowledge = ()
         if (row + 1 < self.rows):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row + 1, column], False), ('IG', [row + 1, column], True), True), ('CH', cell, False)),)
+            addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('HS', [row + 1, column], False), ('IG', [row + 1, column], True), True), ('CH', cell, False))]
             addKnowledge = addKnowledge1
             
         if (row - 1 >= 0):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row - 1, column], False), ('IG', [row - 1, column], True), True), ('CH', cell, False)),)
+            addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('HS', [row - 1, column], False), ('IG', [row - 1, column], True), True), ('CH', cell, False))]
             addKnowledge = addKnowledge1
                 
         if (column + 1 < self.columns):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column + 1], False), ('IG', [row, column + 1], True), True), ('CH', cell, False)),)
+            addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('HS', [row, column + 1], False), ('IG', [row, column + 1], True), True), ('CH', cell, False))]
             addKnowledge = addKnowledge1
                 
         if (column - 1 >= 0):
-            addKnowledge1 = addKnowledge + (self.impliesMethod(('AND', ('HS', [row, column - 1], False), ('IG', [row, column - 1], True), True), ('CH', cell, False)),)
+            addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('HS', [row, column - 1], False), ('IG', [row, column - 1], True), True), ('CH', cell, False))]
             addKnowledge = addKnowledge1     
         
         return addKnowledge
@@ -357,14 +361,73 @@ class Knowledge:
     
     # UNIFICATION METHODS -------------------------------------------------
     
-    
-    
+    def unifyFunction(self, X, Y, Theta=None): # performed whenever a function is 'anded' or 'or-ed' 
+        # with another funciton (our clausesQueue should be considered a massive 'and' string for this purpose)
+        if Theta is None:
+            Theta = []
+        if (Theta == -1):
+            return -1
+        if (X == Y):
+            # Theta.append([X, Y])
+            return Theta # items are identical, return substitutions
+        
+        Xtype = type(X)
+        Ytype = type(Y)
+        constantX = self.isConstant(X)
+        constantY = self.isConstant(Y)
+        
+        if (!constantX and Xtype != tuple and Xtype != str and Xtype != list): # X is variable
+            return self.unifyVariables(X, Y, Theta)
+        elif (!constantY and Ytype != tuple and Ytype != str and Ytype != list):  # Y is variable
+            return self.unifyVariables(Y, X, Theta)
+        elif (Xtype == tuple and Ytype == tuple):
+            if (len(X) == 3 and len(X) == 3):
+                return self.unifyVariables(Y[1], X[1], self.unifyFunction(Y[0], X[0], Theta))
+            elif (len(X) == 4 and len(X) == 4):
+                return self.unifyFunction([Y[1], Y[2]], [X[1], X[2]], self.unifyFunction(Y[0], X[0], Theta))
+            else:
+                return -1
+        elif (Xtype == list and Ytype == list):
+            return self.unifyFunction(X[1:], Y[1:], self.unifyFunction(X[0], Y[0], Theta))
+        
+        return -1
+        
+        
+    def unifyVariables(self, var, X, Theta):
+        if [var, True] in Theta:
+            return self.unifyFunction(True, X, Theta)
+        elif [var, False] in Theta:
+            return self.unifyFunction(False, X, Theta)
+        if [X, True] in Theta:
+            return self.unifyFunction(var, True, Theta)
+        elif [X, False] in Theta:
+            return self.unifyFunction(var, False, Theta)
+        elif self.occurCheck(var, X):
+            return -1
+        
+        else:
+            Theta.append([var, X])
+            return Theta
+        
+    def occurCheck(self, var, X):
+        if (X == var):
+            return True
+        if (self.isConstant(X)):
+            return False
+        Xtype = type(X)
+        Ytype = type(Y)
+        if (Xtype == list or Xtype == tuple):
+            for i in X:
+                failed = self.occurCheck(var, i)
+                if failed:
+                    return True
+        return False
     
     # END UNIFICATION METHODS -------------------------------------------------
     
     
     # RESOLUTION METHODS -------------------------------------------------
-    def resolveFunction(self, statementTuple): # start with this for all predicates, then unify. 
+    def resolvePredicate(self, statementTuple): # start with this for all predicates, then unify. 
         
         newStatementTuple = ()
         
