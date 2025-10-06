@@ -658,23 +658,88 @@ class Knowledge:
     
     
     # RESOLUTION METHODS -------------------------------------------------
+    def setForcedValues(self, targetValue): # works because all 2-tuples are 
+        # moved to the bottom of tree (not-and, not-or), or removed (not-not)
+        # or were at bottom of tree to start (map-cells)
+        
+        # TARGET VALUE ALWAYS SET TRUE FOR INITIAL CALL!
+        
+        performedResolve = False
+        newClausesQueue = []
+        
+        for clause in self.clausesQueue:
+            targetResult = True # from top of tree, always seek True values
+            clauseCat = len(clause) # get type (should never be raw boolean)
+            currentClause = clause
+            if(clauseCat == 2):
+                resultingValue = False
+                clausePredicate = clause[0]
+                clauseValue = clause[1]
+                if (clausePredicate == 'NOT'): # will only ever be one 'NOT' at back-end of logic tree
+                    targetValue = False # target value becomes False
+                    innerClause = clauseValue[1] # grab inner variable/constant
+                    currentClause = innerClause
+                
+                isConstantValue = isConstant(currentClause)
+                
+                if(isConstantValue): # if constant
+                    resultingValue = evaluateCellCall(currentClause) # check consistency
+                    # do not re-append to queue, value is set
+                    if (targetValue == resultingValue): # if already consistent
+                        pass # do nothing, remove from queue
+                    
+                    else: # if constant causes contradiction, return failure
+                        return -1
+                    
+                else: # if variable
+                    resultingValue = evaluateCellCall(currentClause)
+                    if (targetValue == resultingValue): # if already consistent
+                        newClausesQueue.append(currentClause) # do nothing besides slight simplification (potentially)
+                        # (could still cause contradiction later)
+                    else: # if not consistent
+                        setCell(currentClause) # value becomes constant
+                        newClausesQueue.append(currentClause) # do nothing else besides slight simplification (potentially)
+                        # (could still cause contradiction later)
+                    
+            else:
+                newClausesQueue.append(clause) # if different kind of tuple, no forced value exists
+                
+        self.clausesQueue = newClausesQueue
+        return performedResolve
+    
+        
+        
+    
     def resolveStatements(self):
         performedResolve = False
         newClausesQueue = []
         for clause in self.clausesQueue:
             newClause = self.resolvePredicate(clause)
+            
             if (clause == True):
-                # pass # if statement resolved to True, remove from array
+                # pass # if top-level clause resolved to True, remove from array
                 performedResolve = True
             elif (clause == False):
-                return -1
+                # maybe print error message
+                return -1 # return failure if top-level clause becomes false,
             else:
                 newClausesQueue += [newClause]
                 if (newClause != clause):
                     performedResolve = True
                 
         self.clausesQueue = newClausesQueue
-        return performedResolve
+        
+        # NOW CHECK FOR FORCED VALUE-SETS!!!
+        targetValue = True
+        forcedValuesSet = setForcedValues(self, targetValue)
+        
+        if (forcedValuesSet == -1):
+            return -1 # return failure if top-level clause is forced false
+        
+        if (forcedValuesSet): # If forced values were set, re-call resolveStatements to ensure completed resolution
+            resolveStatements(self) # no need to check whether inner resolves were performed, if we're here, we know changes occurred
+            performedResolve = True # we know this happened if setForcedValues occurred
+        return performedResolve # flag for code to determine whether resolution changed anything
     
     def resolvePredicate(self, statementTuple): # start with this for all predicates, then unify. 
         
@@ -696,13 +761,7 @@ class Knowledge:
         
         result = self.evaluateFunction(statementTuple)
         
-        if (result == 0):
-            return statementTuple # if we cannot resolve a variable, do not resolve 
-        
-        if (result == 1):
-            return True # if result matches target, return True
-        
-        return False # if result does not match target, return False
+        return result
             
         
         
@@ -721,11 +780,11 @@ class Knowledge:
             if (typeVar == bool): # if value is constant, return method Value
                 result = self.notMethod(toEvaluate)
                 if (result):
-                    return 1 # if the result is correct, return 1
-                return -1 # if the result is incorrect, return -1 (False)
+                    return True # if the result is correct, return 1
+                return False # if the result is incorrect, return -1 (False)
             else: # if value is not constant, try both True and False values (basically, always remains as a variable here, but more code
                 # is explanatory
-                return 0
+                return statementTuple
                 
             
             
@@ -735,14 +794,15 @@ class Knowledge:
             constant = self.isConstant(statementTuple)
             
             if (not constant): # if value is variable
-                return 0 # if the result is a variable and true, return 0 to keep as variable
+                return statementTuple # if the result is a variable and true, return 0 to keep as variable
             elif (result == True): 
-                return 1 # if the result is a constant ant true
+                return True # if the result is a constant ant true
             elif (result == False):
-                return -1 # if result is constant (false), return 1
+                return False # if result is constant (false), return 1
             return 
         
-        elif (predicate == 'AND'):
+        elif (predicate == 'AND'): # note: we do not have to deal with evaluating cell-calls because 
+            #that is handled at a lower-level of recursion
             value1 = statementTuple[1]
             value2 = statementTuple[2]
             
@@ -756,20 +816,24 @@ class Knowledge:
                 totalConstants += 1 
                 
             if (totalConstants == 0):
-                return 0
+                return statementTuple
             elif (totalConstants == 1):
                 attemptResult = andMethod(value1, value2)
                 if (attemptResult == True):
-                    return 0
-                return -1
+                    if (type1 == bool):
+                        return value2 # result no longer dependent upon value1
+                    if (type2 = bool):
+                        return value1 # result no longer dependent upon value2
+                return False
             elif (totalConstants == 2):
                 Result = andMethod(value1, value2)
                 if (result == True):
-                    return 1
-                return -1
-            return 0
+                    return True
+                return False
+            return statementTuple
             
-        elif (predicate == 'OR'):
+        elif (predicate == 'OR'): # note: we do not have to deal with evaluating cell-calls because 
+            #that is handled at a lower-level of recursion
             value1 = statementTuple[1]
             value2 = statementTuple[2]
             
@@ -783,18 +847,22 @@ class Knowledge:
                 totalConstants += 1 
                 
             if (totalConstants == 0):
-                return 0
+                return statementTuple
             elif (totalConstants == 1):
                 attemptResult = self.orMethod(value1, value2)
                 if (attemptResult == False):
+                    if (type1 == bool):
+                        return value2 # result no longer dependent upon value1
+                    if (type2 = bool):
+                        return value1 # result no longer dependent upon value2
                     return 0
-                return 1
+                return True
             elif (totalConstants == 2):
                 Result = self.andMethod(value1, value2)
                 if (result == True):
-                    return 1
-                return -1
-            return 0
+                    return True
+                return False
+            return statementTuple
             
         else:
             # print error message maybe
