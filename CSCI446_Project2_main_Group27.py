@@ -71,50 +71,6 @@ def createHolesWompuses(booleanStates):
     arraysShape = booleanStates.shape
     holesWompusesZeros = np.zeros(arraysShape, dtype=int)
     holesWompuses = holesWompusesZeros.astype(bool)
-    
-    ''' ALL OF THESE OPERATIONS MUST TAKE PLACE IN FOL
-    for row in range(arraysShape[1]):
-        for col in range(arraysShape[2]):
-            if (booleanStates[0][row][col] != True):
-                # if the cell is not known to be safe, there could be 
-                # a hole or a wompus (knowledge base)
-                holesWompuses[0][row][col] = True
-                holesWompuses[1][row][col] = True
-    
-    
-    for row in range(arraysShape[1]):
-        for col in range(arraysShape[2]):
-            if (booleanStates[0][row][col] == True): # If cell is safe and visited
-                # (all known-safe cells have been visited at this point in the code)
-                # check whether there is a stench or a breeze: 
-                # if there is no breeze, there is no hole in adjacent cells
-                # (knowledge base)
-                if (booleanStates[2][row][col] != True):
-                    if (row + 1 < arraysShape[1]): # if row 'below' exists in map
-                        holesWompuses[0][row + 1][col] = False
-                    if (row - 1 > -1): # if row 'above' exists in map
-                        holesWompuses[0][row - 1][col] = False
-                    if (col + 1 < arraysShape[1]): # if column 'below' exists in map
-                        holesWompuses[0][row][col + 1] = False
-                    if (col - 1 > -1): # if column 'above' exists in map
-                        holesWompuses[0][row][col - 1] = False
-                
-                # if there is no stench, there is no wompus in adjacent cells
-                # (knowledge base)
-                if (booleanStates[3][row][col] != True):
-                    if (row + 1 < arraysShape[1]): # if row 'below' exists in map
-                        holesWompuses[1][row + 1][col] = False
-                    if (row - 1 > -1): # if row 'above' exists in map
-                        holesWompuses[1][row - 1][col] = False
-                    if (col + 1 < arraysShape[1]): # if column 'below' exists in map
-                        holesWompuses[1][row][col + 1] = False
-                    if (col - 1 > -1): # if column 'above' exists in map
-                        holesWompuses[1][row][col - 1] = False
-    # the next step (logically) would be to say that "if there is 
-    # no chance of wompus and there is no chance of hole, then the cell is safe
-    # Likely part of knowledge base, but should be implemented in recursive FOL cycle
-    '''
-                
     return holesWompuses
     
     

@@ -33,6 +33,8 @@ class Knowledge:
         
         self.clausesQueue = [] # clauses to be unified/resolved/evaluated, combined with unification (if possible) or 'and-ing' together
         
+        self.runCount = 0
+        
         
         # EXPLANATION OF VARIABLES AND CONSTANTS:
         # (A state refers to any boolean value)
@@ -89,19 +91,19 @@ class Knowledge:
         neighboringStench = False
         
         if (row + 1 < self.rows):
-            if (hasStench([row+1, column])):
+            if (self.hasStench([row+1, column])):
                 neighboringStench = True
                 
         if (row - 1 >= 0):
-            if (hasStench([row-1, column])):
+            if (self.hasStench([row-1, column])):
                 neighboringStench = True
                 
         if (column + 1 < self.columns):
-            if (hasStench([row,column + 1])):
+            if (self.hasStench([row,column + 1])):
                 neighboringStench = True
                 
         if (column - 1 >= 0):
-            if (hasStench([row, column - 1])):
+            if (self.hasStench([row, column - 1])):
                 neighboringStench = True       
         
         return neighboringStench
@@ -190,9 +192,56 @@ class Knowledge:
         
         if (element == True or element == False): # if it is a constant True or False
             return True
+        if type(element) != tuple or len(element) != 2:  # if shape not consistent with graph calls
+            return False
+        code = element[0]
+        cell = element[1]
+        
+        if code == 'HS':  # Constant if True
+            return self.hasStench(cell)
+        elif code == 'HB':  # Constant if True
+            return self.hasBreeze(cell)
+        elif code == 'IS':  # Constant if True
+            return self.isSafe(cell)
+        elif code == 'IU':  # Constant if True
+            return self.isUnsafe(cell)
+        elif code == 'CW':  # Constant if False (could not)
+            return not self.couldWompus(cell)
+        elif code == 'CH':  # Constant if False
+            return not self.couldHole(cell)
+        elif code == 'IW':  # Constant if True
+            return self.isWompus(cell)
+        elif code == 'IH':  # Constant if True
+            return self.isHole(cell)
+        elif code == 'IG':  # Always constant
+            return True
         
         return False
     
+    def evaluateCellCall(self, element):
+        code = element[0]
+        cell = element[1]
+        if code == 'HS':  
+            return self.hasStench(cell)
+        elif code == 'HB':  
+            return self.hasBreeze(cell)
+        elif code == 'IS': 
+            return self.isSafe(cell)
+        elif code == 'IU': 
+            return self.isUnsafe(cell)
+        elif code == 'CW': 
+            return self.couldWompus(cell)
+        elif code == 'CH': 
+            return self.couldHole(cell)
+        elif code == 'IW': 
+            return self.isWompus(cell)
+        elif code == 'IH': 
+            return self.isHole(cell)
+        elif code == 'IG': 
+            return self.isGiven(cell)
+        
+        return -1 # if invalid, return failure
+        
     
     
     
@@ -211,6 +260,50 @@ class Knowledge:
         # store the expression: (not x) or y
         implies = ("OR", ("NOT", X), Y)
         return implies
+    
+    def moveCancelNots(self, statementTuple, previousPredicate):
+        newStatementTuple = statementTuple
+        predicate = statementTuple[0]
+        notWasMoved = False
+        
+        if (previousPredicate == 'NOT'):
+            if (predicate == 'AND'):
+                new1 = ('NOT', statementTuple[1])
+                new2 = ('NOT', statementTuple[2])
+                newStatementTuple = ('OR', new1, new2)
+                notWasMoved = True
+            elif (predicate == 'OR'):
+                new1 = ('NOT', statementTuple[1])
+                new2 = ('NOT', statementTuple[2])
+                newStatementTuple = ('AND', new1, new2)
+                notWasMoved = True
+            elif (predicate == 'NOT'):
+                new1 = statementTuple[1]
+                newStatementTuple = new1
+                notWasMoved = True
+                
+        newPredicate = newStatementTuple[0]
+        finalStatementTuple = ()
+        
+        for element in newStatementTuple:
+            nottedElement = ()
+            if (type(element) == tuple):
+                nottedResults = self.moveCancelNots(element, newPredicate)
+                nottedElement = nottedResults[0]
+                removeNot = nottedResults[1]
+                if (removeNot):
+                    nottedElement = nottedElement[1] 
+                
+            else:
+                nottedElement = element
+            
+            finalStatementTuple += (nottedElement,)
+        
+        resultsTuple = (finalStatementTuple, notWasMoved)
+            
+        return resultsTuple
+         
+        
     
     def andMethod(self, X, Y): # CODE: 'AND' // Constant: if FALSE OR IF X and Y are constants (do not call if both are variables)
         # (if one of X or Y is variable and result is True, treat result as variable)
@@ -241,36 +334,37 @@ class Knowledge:
         
         
     def noMoreWompuses(self): # to be run if marked wompuses is equal to marked holes
-        for row in self.rows:
-            for column in self.columns: # for every cell
+        for row in range(self.rows):
+            for column in range(self.columns): # for every cell
                 if (not self.holesWompuses[3][row][column]): # if there is not a wompus
                     # there could not be a wompus
                     self.holesWompuses[1][row][column] = False 
         return
     
-    def setHasWompus(self, cell):
+    def setCell(self, element):
+        code = element[0]
+        cell = element[1]
         row = cell[0]
         column = cell[1]
-        self.holesWompuses[3][row][column] = True
-        return
-    
-    def setHasHole(self, cell):
-        row = cell[0]
-        column = cell[1]
-        self.holesWompuses[2][row][column] = True
+        if code == 'HS':  
+            self.booleanStates[3][row][column] = True
+        elif code == 'HB':  
+            self.booleanStates[2][row][column] = True
+        elif code == 'IS':
+            self.booleanStates[0][row][column] = True
+        elif code == 'IU': 
+            self.booleanStates[1][row][column] = True
+        elif code == 'CW': 
+            self.holesWompuses[1][row][column] = False
+        elif code == 'CH': 
+            self.holesWompuses[0][row][column] = False
+        elif code == 'IW': 
+            self.holesWompuses[3][row][column] = True
+        elif code == 'IH': 
+            self.holesWompuses[2][row][column] = True
+            
         return
         
-    def setCellCouldWompus(self, cell):
-        row = cell[0]
-        column = cell[1]
-        self.holesWompuses[1][row][column] = False
-        return
-    
-    def setCellCouldHole(self, cell):
-        row = cell[0]
-        column = cell[1]
-        self.holesWompuses[0][row][column] = False
-        return
     
     
     
@@ -281,8 +375,8 @@ class Knowledge:
     
         # KNOWLEDGE BASE OPERATIONS METHODS -------------------------------------------------
     def initializeKnowledge(self): # create initial tuple containing all of knowledge base
-        for row in self.rows:
-            for column in self.columns:
+        for row in range(self.rows):
+            for column in range(self.columns):
                 cell = [row, column]
                 self.clausesQueue += self.noStenchNeighbor(cell)
                 self.clausesQueue += self.noBreezeNeighbor(cell)
@@ -293,8 +387,26 @@ class Knowledge:
         if (self.test == 1):
             self.clausesQueue += [self.cellNotSafe(self.query)]
             
+        CNFIndex = 0
+        clausesCount = len(self.clausesQueue)
         for i in self.clausesQueue:
             self.clausesArray.append(str(i)) # add every clause to clauses Queue records string
+            newResult = self.moveCancelNots(i, 'AND') 
+            newClause = newResult[0]
+            
+            if (CNFIndex != 0 and CNFIndex != clausesCount - 1):
+                self.clausesQueue = (self.clausesQueue[:CNFIndex] + [newClause] + self.clausesQueue[CNFIndex + 1:])
+
+            elif (CNFIndex == 0):
+                self.clausesQueue = [newClause] + self.clausesQueue[1:]
+                
+            else:
+                self.clausesQueue = self.clausesQueue[:-1] + [newClause]
+            
+            CNFIndex += 1
+        for i in self.clausesQueue:
+            self.clausesArray.append(str(i)) # add every clause to clauses Queue records 
+        
         return
         
     def cellNotUnsafe(self, cell): # if this causes a contradiction, then cell must be Unsafe -- do not append to the clausesQueue within 
@@ -335,7 +447,7 @@ class Knowledge:
         row = cell[0]
         column = cell[1]
         
-        addKnowledge = ()
+        addKnowledge = []
         if (row + 1 < self.rows):
             addKnowledge1 = addKnowledge + [self.impliesMethod(('AND', ('NOT', ('HB', [row + 1, column])), ('IG', [row + 1, column])), ('NOT', ('CH', cell)))]
             addKnowledge = addKnowledge1
@@ -369,40 +481,65 @@ class Knowledge:
     
     
     # UNIFICATION METHODS -------------------------------------------------
+    def substituteRecursion(self, element, Theta):
+        if not Theta:
+            return element # if substitutions empty, return as-is
+        elementType = type(element)
+        if elementType != tuple:
+            # Check theta to see if we have match
+            for listing in Theta:
+                to_replace = listing[0]
+                replace_with = listing[1]
+                if element == to_replace:
+                    return replace_with
+            return element
+        # if type is tuple, check sub-elements
+        newElements = []
+        for subElement in element:
+            newElements.append(self.substituteRecursion(subElement, Theta))
+        return tuple(new_elements)
+
     def performSubstitutions(self, Y, Theta):
-        
-        return 
+        if not Theta: # if substitutions empty, return as-is
+            return Y
+        substitutedClause = self.substituteRecursion(Y, Theta)
+        return substitutedClause
     
     def unifyStatements(self):
-        unified = False
+        performedUnify = False
         clauseQueue = []
-        for X in self.clausesArray: # for every clause
-            clauseQueue += [X]
+        for X in self.clausesQueue: # for every clause
+            clauseQueue.append(X)
             
         while clauseQueue:
             X = clauseQueue.pop(0)
             currentClauseIndex = 0
-            clausesCount = len(clausesArray) 
-            for Y in self.clausesArray:
-                replace = self.unifyFunction(X, Y)
+            clausesCount = len(self.clausesQueue) 
+            for Y in self.clausesQueue:
+                Theta = self.unifyFunction(X, Y)
                 
                 # perform substitutions
-                newY = self.performSubstitutions(Y, replace)
-                if (currentClauseIndex != 0 and currentClauseIndex != clausesCount):
-                    self.clausesArray = (self.clausesArray[:Y] + [newY] + self.clausesArray[Y + 1:])
-                
-                
-                if (replace != -1 and replace != []):
-                    unified = True
-                    clausesQueue += newY
-                
-                
+                if (Theta != -1):
+                    newY = self.performSubstitutions(Y, Theta)
+                    if (currentClauseIndex != 0 and currentClauseIndex != clausesCount - 1):
+                        self.clausesQueue = (self.clausesQueue[:currentClauseIndex] + [newY] + self.clausesQueue[currentClauseIndex + 1:])
+
+                    elif (currentClauseIndex == 0):
+                        self.clausesQueue = [newY] + self.clausesQueue[1:]
+                    else:
+                        self.clausesQueue = self.clausesQueue[:-1] + [newY]
+                        
+                    if (newY != Y):
+                        performedUnify = True
+                        clauseQueue.append(newY)
+                        clausesArray.append(str(newY))
 
                 currentClauseIndex += 1
             
-        return unified
+        return performedUnify
     
     def unifyFunction(self, X, Y, Theta=None): # performed whenever a function is 'anded' or 'or-ed' 
+        self.runCount += 1 # number of times this is run -- metric for program scaling
         # with another funciton (our clausesQueue should be considered a massive 'and' string for this purpose)
         if Theta is None:
             Theta = []
@@ -417,23 +554,79 @@ class Knowledge:
         constantX = self.isConstant(X)
         constantY = self.isConstant(Y)
         
-        if ((not constantX) and Xtype != tuple and Xtype != str and Xtype != list): # X is variable
-            return self.unifyVariables(X, Y, Theta)
-        elif ((not constantY) and Ytype != tuple and Ytype != str and Ytype != list):  # Y is variable
-            return self.unifyVariables(Y, X, Theta)
-        elif (Xtype == tuple and Ytype == tuple):
-            if (len(X) == 2 and len(Y) == 2):
-                return self.unifyFunction(Y[1], X[1], self.unifyFunction(Y[0], X[0], Theta))
-            elif (len(X) == 3 and len(Y) == 3):
-                return self.unifyFunction([Y[1], Y[2]], [X[1], X[2]], self.unifyFunction(Y[0], X[0], Theta))
+        if Xtype == bool and Ytype == bool:
+            if (X == Y):  
+                return Theta # they are equal, valid
+            else:
+                return -1  # they are unequal, return fail
+        elif Xtype == bool and constantY:
+            valueY = self.evaluateCellCall(Y)
+            if (X == valueY):
+                return Theta 
             else:
                 return -1
-        elif (Xtype == list and Ytype == list):
-            return self.unifyFunction(X[1:], Y[1:], self.unifyFunction(X[0], Y[0], Theta))
+        elif Ytype == bool and constantX:
+            valueX = self.evaluateCellCall(X)
+            if (valueX == Y):
+                return Theta 
+            else:
+                return -1
+        elif Xtype == bool and not constantY:
+            return self.unifyVariables(Y, X, Theta)
         
+        elif Ytype == bool and not constantX:
+            return self.unifyVariables(X, Y, Theta)
+
+        # Other constants
+        elif constantX and constantY:
+            valueY = self.evaluateCellCall(Y)
+            valueX = self.evaluateCellCall(X)
+            if valueX == valueY:
+                return Theta
+            else:
+                return -1
+        elif constantX:
+            # Substitute X value into Y if possible
+            valueX = self.evaluateCellCall(X)
+            return self.unifyVariables(Y, valueX, Theta)
+        elif constantY:
+            # Substitute Y value into X if possible
+            valueY = self.evaluateCellCall(Y)
+            return self.unifyVariables(X, valueY, Theta)
+        
+        # Tuples (non-constant)
+        
+        elif Xtype == tuple and Ytype == tuple:
+            if len(X) != len(Y):
+                return -1
+            if len(X) == 2:  # 'NOT' and non-constant cell calls
+                theta1 = self.unifyFunction(X[0], Y[0], Theta)
+                if theta1 == -1:
+                    return -1
+                return self.unifyFunction(X[1], Y[1], theta1)  # if predicate identical,
+            #run on value
+            elif len(X) == 3:  # For 'And' and 'Or' statements
+                theta1 = self.unifyFunction(X[0], Y[0], Theta)
+                if theta1 == -1:
+                    return -1
+                theta2 = self.unifyFunction(X[1], Y[1], theta1)
+                if theta2 == -1:
+                    return -1
+                return self.unifyFunction(X[2], Y[2], theta2)
+            else:
+                return -1
+
+        # for lists 
+        elif Xtype == list and Ytype == list:
+            if len(X) != len(Y):
+                return -1
+            theta1 = self.unifyFunction(X[0], Y[0], Theta)
+            if theta1 == -1:
+                return -1
+            return self.unifyFunction(X[1:], Y[1:], theta1)
+
         return -1
-        
-        
+
     def unifyVariables(self, var, X, Theta):
         if [var, True] in Theta:
             return self.unifyFunction(True, X, Theta)
@@ -445,22 +638,19 @@ class Knowledge:
             return self.unifyFunction(var, False, Theta)
         elif self.occurCheck(var, X):
             return -1
-        
         else:
             Theta.append([var, X])
             return Theta
-        
+
     def occurCheck(self, var, X):
-        if (X == var):
+        if X == var:
             return True
-        if (self.isConstant(X)):
+        if self.isConstant(X):
             return False
         Xtype = type(X)
-        Ytype = type(Y)
-        if (Xtype == list or Xtype == tuple):
+        if Xtype in (list, tuple):
             for i in X:
-                failed = self.occurCheck(var, i)
-                if failed:
+                if self.occurCheck(var, i):
                     return True
         return False
     
@@ -469,13 +659,29 @@ class Knowledge:
     
     # RESOLUTION METHODS -------------------------------------------------
     def resolveStatements(self):
-        
+        performedResolve = False
+        newClausesQueue = []
+        for clause in self.clausesQueue:
+            newClause = self.resolvePredicate(clause)
+            if (clause == True):
+                # pass # if statement resolved to True, remove from array
+                performedResolve = True
+            elif (clause == False):
+                return -1
+            else:
+                newClausesQueue += [newClause]
+                if (newClause != clause):
+                    performedResolve = True
+                
+        self.clausesQueue = newClausesQueue
+        return performedResolve
     
     def resolvePredicate(self, statementTuple): # start with this for all predicates, then unify. 
         
         newStatementTuple = ()
         
         for element in statementTuple:
+            resolvedElement = ()
             if (type(element) == tuple):
                 resolvedElement = self.resolveFunction(element)
             else:
@@ -504,56 +710,95 @@ class Knowledge:
     
     def evaluateFunction(self, statementTuple): # NOTE: FAILURE SIMPLY RESULTS IN A FALSE VALUE INSIDE resolveFunction METHOD
         predicate = statementTuple[0]
+        self.runCount += 1 # number of times this is run -- metric for program scaling
+        tupleLength = len(statementTuple)
         
         if (predicate == 'NOT'):
             toEvaluate = statementTuple[1]
-            if isConstant(toEvaluate): # if value is constant, return method Value
+            
+            typeVar = type(toEvaluate)
+            
+            if (typeVar == bool): # if value is constant, return method Value
                 result = self.notMethod(toEvaluate)
                 if (result):
                     return 1 # if the result is correct, return 1
                 return -1 # if the result is incorrect, return -1 (False)
             else: # if value is not constant, try both True and False values (basically, always remains as a variable here, but more code
                 # is explanatory
-                evaluateFalse = False
-                evaluateTrue = False
-                resultTrue = self.notMethod(True)
-                resultFalse = self.notMethod(False)
-                if (resultTrue and resultFalse): # technically impossible, but writing for clarity
-                    return 0 # result remains a variable, do not simplify
-                elif (resultTrue):
-                    return 0 # if result is unknown, return 0
-                elif (resultFalse):
-                    return 0 # if result is unknown, return 0
-                return -1 # if the result is incorrect, return -1 (false)
+                return 0
+                
             
-        if (predicate == 'CW'):
-            toEvaluate = statementTuple[1]
             
-            result = self.couldWompus(toEvaluate) # variable if current value of couldWompus in cell is True
+        elif (tupleLength == 2):
             
-            if (result == True): # if value is variable
+            result = self.evaluatecellCall(statementTuple) # variable if current value of couldWompus in cell is True
+            constant = self.isConstant(statementTuple)
+            
+            if (not constant): # if value is variable
                 return 0 # if the result is a variable and true, return 0 to keep as variable
-            else (result == False):
+            elif (result == True): 
+                return 1 # if the result is a constant ant true
+            elif (result == False):
                 return -1 # if result is constant (false), return 1
+            return 
+        
+        elif (predicate == 'AND'):
+            value1 = statementTuple[1]
+            value2 = statementTuple[2]
             
-        if (predicate == 'CH'):
-            toEvaluate = statementTuple[1]
+            type1 = type(value1)
+            type2 = type(value2)
             
-            result = self.couldHole(toEvaluate) # variable if current value of couldWompus in cell is True
-            
-            if (result == True): # if value is a variable and is True
-                return 0 # if the result is a variable and true, return 0 to keep as variable
-            else: # if the value is constant and incorrect, return failure
+            totalConstants = 0
+            if (type1 == bool):
+                totalConstants += 1
+            if (type2 == bool):
+                totalConstants += 1 
+                
+            if (totalConstants == 0):
+                return 0
+            elif (totalConstants == 1):
+                attemptResult = andMethod(value1, value2)
+                if (attemptResult == True):
+                    return 0
                 return -1
+            elif (totalConstants == 2):
+                Result = andMethod(value1, value2)
+                if (result == True):
+                    return 1
+                return -1
+            return 0
             
-        if (predicate == 'IG'):
-            toEvaluate = statementTuple[1]
+        elif (predicate == 'OR'):
+            value1 = statementTuple[1]
+            value2 = statementTuple[2]
             
-            # we know this is a constant because given values are constant:
-            result = self.isGiven(toEvaluate)
-            if (result):
-                return 1 # if the result is correct , return 1
-            return -1 # if the result is incorrect, return -1 (failure)
+            type1 = type(value1)
+            type2 = type(value2)
+            
+            totalConstants = 0
+            if (type1 == bool):
+                totalConstants += 1
+            if (type2 == bool):
+                totalConstants += 1 
+                
+            if (totalConstants == 0):
+                return 0
+            elif (totalConstants == 1):
+                attemptResult = self.orMethod(value1, value2)
+                if (attemptResult == False):
+                    return 0
+                return 1
+            elif (totalConstants == 2):
+                Result = self.andMethod(value1, value2)
+                if (result == True):
+                    return 1
+                return -1
+            return 0
+            
+        else:
+            # print error message maybe
+            return 0
             
             
         # CODE CYCLE:
