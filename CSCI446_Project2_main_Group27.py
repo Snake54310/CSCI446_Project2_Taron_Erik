@@ -96,7 +96,7 @@ def saveOutput(deduction, clausesArray, GROUP_ID, PUZZLE_PATH): # saves solved p
     return
 
 def testQuery(booleanStates, holesWompuses, arrows, query):
-    test1 = 0 # set 0, -1 for testing
+    test1 = 1 # set 1, -1 for testing
     knowledgeBase1 = Knowledge(booleanStates, holesWompuses, arrows, query, test1)
     knowledgeBase1.initializeKnowledge()
     Changed = True
@@ -105,14 +105,18 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
         Changed = False
         Changed = knowledgeBase1.resolveStatements()
         if (Changed == -1):
-            print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
+            '''print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
             print(knowledgeBase1.getBooleanStates())
             print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
-            print(knowledgeBase1.getHolesWompuses())
+            print(knowledgeBase1.getHolesWompuses())'''
             print("SAFE")
             return "SAFE"
+        if not Changed:
+            Changed = knowledgeBase1.unifyForcedValues()
+        else:
+            knowledgeBase1.unifyForcedValues()
         
-    print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
+    '''print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
     print(knowledgeBase1.getBooleanStates())
     print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
     print(knowledgeBase1.getHolesWompuses())
@@ -122,10 +126,10 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
     for i in remainingClauses:
         print(i)
     
-    print("BREAKKKKKKKKKKKK")    
+    print("BREAKKKKKKKKKKKK")    '''
         
     
-    test0 = 1 # set 1
+    test0 = 0 # set 0
     knowledgeBase0 = Knowledge(booleanStates, holesWompuses, arrows, query, test0)
     knowledgeBase0.initializeKnowledge()
     Changed = True
@@ -139,7 +143,11 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
         if (Changed == -1):
             print("UNSAFE")
             return "UNSAFE"
-
+        if not Changed:
+            Changed = knowledgeBase0.unifyForcedValues()
+        else:
+            knowledgeBase0.unifyForcedValues()
+    '''
     print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
     print(knowledgeBase0.getBooleanStates())
     print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
@@ -148,7 +156,7 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
     print("remaining clauses:")
     remainingClauses2 = knowledgeBase0.getClausesQueue()
     #for i in remainingClauses2:
-        #print(i)
+        #print(i)'''
     
     print("RISKY")
     return "RISKY"

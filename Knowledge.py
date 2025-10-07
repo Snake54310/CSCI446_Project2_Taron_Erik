@@ -35,7 +35,6 @@ class Knowledge:
         
         self.runCount = 0
         
-        self.cellsWithWompus = 0
         
         
         # EXPLANATION OF VARIABLES AND CONSTANTS:
@@ -201,7 +200,7 @@ class Knowledge:
             isHole = True
         return isHole
     def atCapacity(self):
-        atCapacity = (self.arrows == self.cellsWithWompus)
+        atCapacity = (self.arrows == 0)
         #print("arrows = " + str(self.cellsWithWompus))
         return atCapacity
     
@@ -398,8 +397,6 @@ class Knowledge:
         elif code == 'HB':  
             self.booleanStates[2][row][column] = True
         elif code == 'IS':
-            #print("set safe:")
-            #print(element)
             self.booleanStates[0][row][column] = True
         elif code == 'IU': 
             self.booleanStates[1][row][column] = True
@@ -409,7 +406,7 @@ class Knowledge:
             self.holesWompuses[0][row][column] = False
         elif code == 'IW': 
             self.holesWompuses[3][row][column] = True
-            self.cellsWithWompus += 1
+            self.arrows = (self.arrows - 1)
         elif code == 'IH': 
             self.holesWompuses[2][row][column] = True
         elif code == 'CWC':
@@ -624,7 +621,7 @@ class Knowledge:
             #addKnowledge.append(self.iffMethod(('HS', cell), addTuple))
             addKnowledge.append(self.impliesMethod(('HS', cell), addTuple))
             
-        print(addKnowledge[0])
+        # print(addKnowledge[0])
         return addKnowledge
     
     # 11. if cell has breeze, then at least one adjacent cell has hole
@@ -670,7 +667,7 @@ class Knowledge:
             # addKnowledge.append(self.iffMethod(('HB', cell), addTuple))
             addKnowledge.append(self.impliesMethod(('HB', cell), addTuple))
             
-        print(addKnowledge[0])
+        # print(addKnowledge[0])
         return addKnowledge
     # (neighbor1hole OR neighbor2hole OR neighbor3hole OR neighbor4hole)
     
@@ -688,64 +685,65 @@ class Knowledge:
     
     # UNIFICATION METHODS -------------------------------------------------
 
-    def unifyForcedValues(self, targetValue): # works because all 2-tuples are 
-    # moved to the bottom of tree (not-and, not-or), or removed (not-not)
-    # or were at bottom of tree to start (map-cells)
+    def unifyForcedValues(self): # works because all 2-tuples are 
+        # moved to the bottom of tree (not-and, not-or), or removed (not-not)
+        # or were at bottom of tree to start (map-cells)
 
-    # TARGET VALUE ALWAYS SET TRUE FOR INITIAL CALL!
+        # TARGET VALUE ALWAYS SET TRUE FOR INITIAL CALL!
 
-    performedUnify = False
-    replacements = {}
+        performedUnify = False
+        replacements = {}
 
-    for clause in self.clausesQueue:
-        targetValue = True # from top of tree, always seek True values
-        clauseCat = len(clause) # get type (should never be raw boolean)
-        currentClause = clause
-        if(clauseCat == 2):
-            self.runCount += 1 # number of times this is run -- metric for program scaling
-            #print(currentClause)
-            resultingValue = False
-            clausePredicate = clause[0]
-            if (clausePredicate == 'NOT'): # will only ever be one 'NOT' at back-end of logic tree
-                #print(clause)
-                targetValue = False # target value becomes False
-                innerClause = clause[1] # grab inner variable/constant
-                currentClause = innerClause
-                if (type(innerClause) != tuple):
-                    print("Error: Appended unreadable atom")
-                    print("atomApendage: " + str(innerClause))
-                    print("original: " + str(clause))
+        for clause in self.clausesQueue:
+            targetValue = True # from top of tree, always seek True values
+            clauseCat = len(clause) # get type (should never be raw boolean)
+            currentClause = clause
+            if(clauseCat == 2):
+                self.runCount += 1 # number of times this is run -- metric for program scaling
+                #print(currentClause)
+                resultingValue = False
+                clausePredicate = clause[0]
+                if (clausePredicate == 'NOT'): # will only ever be one 'NOT' at back-end of logic tree
+                    #print(clause)
+                    targetValue = False # target value becomes False
+                    innerClause = clause[1] # grab inner variable/constant
+                    currentClause = innerClause
+                    if (type(innerClause) != tuple):
+                        print("Error: Appended unreadable atom")
+                        print("atomApendage: " + str(innerClause))
+                        print("original: " + str(clause))
 
-            # VALUES NEVER CONSTANT--THIS PERFORMED APART FROM RESOLUTION
-            #print(currentClause)
-            resultingValue = self.evaluateCellCall(currentClause)
-            
-            replacements.update({str(currentClause) : targetValue})
-            performedUnify = True
+                # VALUES NEVER CONSTANT--THIS PERFORMED APART FROM RESOLUTION
+                #print(currentClause)
+                resultingValue = self.evaluateCellCall(currentClause)
 
-        else:
-            pass # if not correct type of expression, no replacement is found
-        
-    self.clausesQueue = list(self.Unify(replacements, self.clausesQueue))
-    
-    return performedResolve
-    # END UNIFICATION METHODS -------------------------------------------------
+                replacements.update({str(currentClause) : targetValue})
+                performedUnify = True
+
+            else:
+                pass # if not correct type of expression, no replacement is found
+
+        self.clausesQueue = list(self.Unify(replacements, self.clausesQueue))
+
+        return performedUnify
     
     def Unify(self, theta, currentQueue):
         newClausesQueue = ()
         for clause in currentQueue:
             if str(clause) in theta: # base case: replacement available, do not recurse
                 newClausesQueue = newClausesQueue + (theta[str(clause)],)
-            else if (type(clause) == tuple): # recursive case: no replacement available, search lower tree
+            elif (type(clause) == tuple): # recursive case: no replacement available, search lower tree
                 newClausesQueue = newClausesQueue + (self.Unify(theta, clause),)
             else:
                 newClausesQueue = newClausesQueue + (clause,) # Base case: tree not expandable, preserve datastructure
                 
         return newClausesQueue
+    # END UNIFICATION METHODS -------------------------------------------------
+    
     
     
     # RESOLUTION METHODS -------------------------------------------------
-    def setForcedValues(self, targetValue): # works because all 2-tuples are 
+    def setForcedValues(self): # works because all 2-tuples are 
         # moved to the bottom of tree (not-and, not-or), or removed (not-not)
         # or were at bottom of tree to start (map-cells)
         
@@ -783,18 +781,12 @@ class Knowledge:
                         pass # do nothing, remove from queue
                     
                     else: # if constant causes contradiction, return failure
-                        print("failure in Resolution")
+                        # print("failure in Resolution")
                         return -1
                     
                 else: # if variable
                     #print(currentClause)
                     resultingValue = self.evaluateCellCall(currentClause)
-                    
-                    '''if (currentClause[0] == 'IS'):
-                        print(clause)
-                        print(resultingValue)
-                        print(targetValue)'''
-                    
                     
                     if (targetValue == resultingValue): # if already consistent
                         newClausesQueue.append(clause) # do nothing
@@ -827,7 +819,7 @@ class Knowledge:
                 performedResolve = True
             elif (newClause == False):
                 # maybe print error message
-                print("failure in Unification")
+                # print("failure in Unification")
                 return -1 # return failure if top-level clause becomes false,
             else:
                 if (type(newClause) != tuple):
@@ -842,8 +834,7 @@ class Knowledge:
         self.clausesQueue = newClausesQueue
         
         # NOW CHECK FOR FORCED VALUE-SETS!!!
-        targetValue = True
-        forcedValuesSet = self.setForcedValues(targetValue)
+        forcedValuesSet = self.setForcedValues()
         
         if (forcedValuesSet == -1):
             return -1 # return failure if top-level clause is forced false
@@ -857,6 +848,9 @@ class Knowledge:
     def resolvePredicate(self, statementTuple): # start with this for all predicates, then unify. 
         
         newStatementTuple = ()
+        
+        if (type(statementTuple) == bool):
+            return statementTuple
         
         for element in statementTuple:
             resolvedElement = ()
