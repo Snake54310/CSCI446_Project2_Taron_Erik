@@ -107,7 +107,7 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
         if (Changed == -1):
             print("SAFE")
             remainingClauses = knowledgeBase1.getClausesArray()
-            print("OPERATIONS NEEDED = " + str(knowledgeBase0.getRunCount()))
+            print("OPERATIONS NEEDED = " + str(knowledgeBase1.getRunCount()))
             return ("SAFE", remainingClauses)
         if not Changed:
             Changed = knowledgeBase1.unifyForcedValues()
