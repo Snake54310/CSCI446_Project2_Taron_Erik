@@ -99,37 +99,35 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
     test1 = 1 # set 1, -1 for testing
     knowledgeBase1 = Knowledge(booleanStates, holesWompuses, arrows, query, test1)
     knowledgeBase1.initializeKnowledge()
-    Changed = True
-    
-    while Changed:
-        Changed = False
-        Changed = knowledgeBase1.resolveStatements()
-        if (Changed == -1):
-            print("SAFE")
-            remainingClauses = knowledgeBase1.getClausesArray()
-            print("OPERATIONS NEEDED = " + str(knowledgeBase1.getRunCount()))
-            return ("SAFE", remainingClauses)
-        if not Changed:
-            Changed = knowledgeBase1.unifyForcedValues()
-        else:
-            knowledgeBase1.unifyForcedValues()
-        
+    Changed1 = True
     
     test0 = 0 # set 0
     knowledgeBase0 = Knowledge(booleanStates, holesWompuses, arrows, query, test0)
     knowledgeBase0.initializeKnowledge()
-    Changed = True
+    Changed2 = True
     
-    while Changed:
-        Changed = False
-        Changed = knowledgeBase0.resolveStatements()
-        if (Changed == -1):
+    while Changed1 or Changed2:
+        Changed1 = False
+        Changed2 = False
+        Changed1 = knowledgeBase1.resolveStatements()
+        if (Changed1 == -1):
+            print("SAFE")
+            remainingClauses = knowledgeBase1.getClausesArray()
+            print("OPERATIONS NEEDED = " + str(knowledgeBase1.getRunCount()))
+            return ("SAFE", remainingClauses)
+        if not Changed1:
+            Changed1 = knowledgeBase1.unifyForcedValues()
+        else:
+            knowledgeBase1.unifyForcedValues()
+        
+        Changed2 = knowledgeBase0.resolveStatements()
+        if (Changed2 == -1):
             print("UNSAFE")
             remainingClauses = knowledgeBase0.getClausesArray()
             print("OPERATIONS NEEDED = " + str(knowledgeBase0.getRunCount()))
             return ("UNSAFE", remainingClauses)
-        if not Changed:
-            Changed = knowledgeBase0.unifyForcedValues()
+        if not Changed2:
+            Changed2 = knowledgeBase0.unifyForcedValues()
         else:
             knowledgeBase0.unifyForcedValues()
     
