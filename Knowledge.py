@@ -29,6 +29,8 @@ class Knowledge:
         self.rows = arraysShape[1] # number of rows in map
         self.columns = arraysShape[2] # number of columns in map
         
+        self.possibleWompuses = (self.rows * self.columns)
+        
         self.clausesArray = [] # record created clauses (strings)
         
         self.clausesQueue = [] # clauses to be unified/resolved/evaluated, combined with unification (if possible) or 'and-ing' together
@@ -74,6 +76,8 @@ class Knowledge:
         return self.runCount
     def getClausesQueue(self):
         return self.clausesQueue
+    def getRunCount(self):
+        return self.runCount
         
     
         # END OUTPUT METHODS -------------------------------------------------
@@ -95,54 +99,6 @@ class Knowledge:
         if (self.booleanStates[2][row][column] == True):
             hasBreeze = True
         return hasBreeze
-    
-    
-    def hasNeighboringStench(self, cell): # CODE: 'HNS' // Constant: Always (likely never call this, though)
-        row = cell[0]
-        column = cell[1]
-        neighboringStench = False
-        
-        if (row + 1 < self.rows):
-            if (self.hasStench([row+1, column])):
-                neighboringStench = True
-                
-        if (row - 1 >= 0):
-            if (self.hasStench([row-1, column])):
-                neighboringStench = True
-                
-        if (column + 1 < self.columns):
-            if (self.hasStench([row,column + 1])):
-                neighboringStench = True
-                
-        if (column - 1 >= 0):
-            if (self.hasStench([row, column - 1])):
-                neighboringStench = True       
-        
-        return neighboringStench
-    
-    
-    def hasNeighboringBreeze(self, cell): # CODE: 'HNB' // Constant: Always (likely never call this, though)
-        row = cell[0]
-        column = cell[1]
-        neighboringBreeze = False
-        
-        if (row + 1 < self.rows):
-            if (self.hasBreeze([row+1, column])):
-                neighboringBreeze = True
-                
-        if (row - 1 >= 0):
-            if (self.hasBreeze([row-1, column])):
-                neighboringBreeze = True
-                
-        if (column + 1 < self.columns):
-            if (self.hasBreeze([row, column + 1])):
-                neighboringBreeze = True
-                
-        if (column - 1 >= 0):
-            if (self.hasBreeze([row, column - 1])):
-                neighboringBreeze = True       
-        
-        return neighboringBreeze
                
     def isGiven(self, cell): # CODE: 'IG' // Constant: Always
         row = cell[0]
@@ -188,6 +144,7 @@ class Knowledge:
         row = cell[0]
         column = cell[1]
         isWompus = False
+        #print(cell)
         if (self.holesWompuses[3][row][column] == True):
             isWompus = True
         return isWompus
@@ -213,11 +170,15 @@ class Knowledge:
         atCapacity = self.atCapacity()
         
         if (atCapacity):
-            print("we are at capacity")
+            #print("we are at capacity")
             result = ((not self.couldWompus(cell)) or self.isWompus(cell)) 
             return result # true if cell has wompus, otherwise false
         else:
             return True # can still be wompus
+        
+    def equalsArrowsWompus(self, cell): # CODE: 'EAW' // constant if True or if cell does not need (BECAUSE could not have) wompus
+        needWompus = ((self.arrows == self.possibleWompuses) and self.couldWompus(cell))
+        return needWompus
         
     
     def isConstant(self, element): # no code likely needed -- called during unification and resolution
@@ -252,6 +213,8 @@ class Knowledge:
         elif code == 'CWC':  # conditions explained above
             result = ((not self.couldWompus(cell)) or self.isWompus(cell)) # or (not self.atCapacity())
             return result
+        elif code == 'EAW': # constant if True or if cell does not need (could not have)wompus
+            return (self.equalsArrows(cell) or not self.couldWompus(cell)) 
         
         return False
     
@@ -278,6 +241,8 @@ class Knowledge:
             return self.isGiven(cell)
         elif code == 'CWC': 
             return self.cellWithinCapacity(cell)
+        elif code == 'EAW':
+            return self.equalsArrows(cell) 
         
         #print(element)
         #print("EVALUATE CELL CALL INVALID")
@@ -402,16 +367,24 @@ class Knowledge:
             self.booleanStates[1][row][column] = True
         elif code == 'CW': 
             self.holesWompuses[1][row][column] = False
+            self.possibleWompuses = (self.possibleWompuses - 1)
         elif code == 'CH': 
             self.holesWompuses[0][row][column] = False
         elif code == 'IW': 
             self.holesWompuses[3][row][column] = True
             self.arrows = (self.arrows - 1)
+            self.possibleWompuses = (self.possibleWompuses - 1) # must also decrease number of required wompuses remaining
+            # otherwise, setting cell as wompus when rule is being reinforced (partially) stops the rule from being reinforced.
         elif code == 'IH': 
             self.holesWompuses[2][row][column] = True
         elif code == 'CWC':
-            print(str(element) + "forced set")
+            #print(str(element) + "forced set")
             self.holesWompuses[1][row][column] = False
+        elif code == 'EAW':
+            # THIS IS NEVER SET BECAUSE:
+            # - ONLY APPEARS IN TOP OF QUEUE AS PART OF 'OR' STATEMENT, AND IS NOTTED
+            # - ALWAYS CONSTANT IF TRUE, NOT TRUE == FALSE, SO RETURN FAILURE INSTEAD OF ATTEMPTING SET
+            print("ERROR: SHOULD NEVER ATTEMPT SET ON EAW")
             
         return
         
@@ -428,6 +401,7 @@ class Knowledge:
         for row in range(self.rows):
             for column in range(self.columns):
                 cell = [row, column]
+                #print(cell)
                 self.allCellRules(cell)
                 
         if (self.test == 0):
@@ -669,6 +643,16 @@ class Knowledge:
             
         # print(addKnowledge[0])
         return addKnowledge
+    # 12. for all cells, if (Equals Arrows) AND (cell could have wompus) THEN (cell is wompus)
+    def ArrowsRule(self, cell):
+        addKnowledge = []
+        #arrowCountRule = self.impliesMethod(('AND', ('EA', cell), ('CW', cell)), ('IW', cell)) 
+        arrowCountRule = self.impliesMethod(('EAW', cell), ('IW', cell)) 
+        # this must be true--or made true--for all cells
+        addKnowledge.append(arrowCountRule)
+        return addKnowledge
+    
+    
     # (neighbor1hole OR neighbor2hole OR neighbor3hole OR neighbor4hole)
     
     # END KNOWLEDGE BASE OPERATIONS METHODS -------------------------------------------------

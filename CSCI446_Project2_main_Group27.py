@@ -69,7 +69,7 @@ def createHolesWompuses(booleanStates):
     # might be a useful draft
     # maybe 'part of knowledge base'
     arraysShape = booleanStates.shape
-    holesWompusesZeros = np.zeros((4, arraysShape[0], arraysShape[1]), dtype=int)
+    holesWompusesZeros = np.zeros((4, arraysShape[1], arraysShape[2]), dtype=int)
     holesWompuses = holesWompusesZeros.astype(bool)
     for row in range(arraysShape[1]):
         for col in range(arraysShape[2]):
@@ -105,61 +105,38 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
         Changed = False
         Changed = knowledgeBase1.resolveStatements()
         if (Changed == -1):
-            '''print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
-            print(knowledgeBase1.getBooleanStates())
-            print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
-            print(knowledgeBase1.getHolesWompuses())'''
             print("SAFE")
-            return "SAFE"
+            remainingClauses = knowledgeBase1.getClausesArray()
+            print("OPERATIONS NEEDED = " + str(knowledgeBase0.getRunCount()))
+            return ("SAFE", remainingClauses)
         if not Changed:
             Changed = knowledgeBase1.unifyForcedValues()
         else:
             knowledgeBase1.unifyForcedValues()
-        
-    '''print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
-    print(knowledgeBase1.getBooleanStates())
-    print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
-    print(knowledgeBase1.getHolesWompuses())
-    
-    print("remaining clauses:")
-    remainingClauses = knowledgeBase1.getClausesQueue()
-    for i in remainingClauses:
-        print(i)
-    
-    print("BREAKKKKKKKKKKKK")    '''
         
     
     test0 = 0 # set 0
     knowledgeBase0 = Knowledge(booleanStates, holesWompuses, arrows, query, test0)
     knowledgeBase0.initializeKnowledge()
     Changed = True
-    finalkb = knowledgeBase1.getKnowledgeBase()
-    #for i in finalkb:
-        #print(i)
     
     while Changed:
         Changed = False
         Changed = knowledgeBase0.resolveStatements()
         if (Changed == -1):
             print("UNSAFE")
-            return "UNSAFE"
+            remainingClauses = knowledgeBase0.getClausesArray()
+            print("OPERATIONS NEEDED = " + str(knowledgeBase0.getRunCount()))
+            return ("UNSAFE", remainingClauses)
         if not Changed:
             Changed = knowledgeBase0.unifyForcedValues()
         else:
             knowledgeBase0.unifyForcedValues()
-    '''
-    print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
-    print(knowledgeBase0.getBooleanStates())
-    print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
-    print(knowledgeBase0.getHolesWompuses())
     
-    print("remaining clauses:")
-    remainingClauses2 = knowledgeBase0.getClausesQueue()
-    #for i in remainingClauses2:
-        #print(i)'''
-    
+    remainingClauses = knowledgeBase1.getClausesArray() + knowledgeBase0.getClausesArray()
+    print("OPERATIONS NEEDED = " + str(knowledgeBase0.getRunCount() + knowledgeBase1.getRunCount()))
     print("RISKY")
-    return "RISKY"
+    return ("RISKY", remainingClauses)
         
     
     
@@ -175,20 +152,14 @@ def main(GROUP_ID, PUZZLE_PATH):
     
     query = query_arrows[0]
     arrows = query_arrows[1]
-    clausesArray = [] # placeholder
 
     holesWompuses = createHolesWompuses(booleanStates)
     
     
     
-    deduction = testQuery(booleanStates, holesWompuses, arrows, query)
-    # output stuff
-    if (booleanStates[0][query[0]][query[1]] == True): 
-        deduction = "SAFE" # if cell is safe, then it's safe
-    elif (booleanStates[1][query[0]][query[1]] == True):
-        deduction = "UNSAFE" # if cell is unsafe, then it's unsafe
-    else: 
-        deduction = "RISKY" # if we don't know, then it's risky
+    resultings = testQuery(booleanStates, holesWompuses, arrows, query)
+    deduction = resultings[0]
+    clausesArray = resultings[1]
     
     
     saveOutput(deduction, clausesArray, GROUP_ID, PUZZLE_PATH)
