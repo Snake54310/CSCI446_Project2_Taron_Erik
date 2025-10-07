@@ -69,8 +69,13 @@ def createHolesWompuses(booleanStates):
     # might be a useful draft
     # maybe 'part of knowledge base'
     arraysShape = booleanStates.shape
-    holesWompusesZeros = np.zeros(arraysShape, dtype=int)
+    holesWompusesZeros = np.zeros((4, arraysShape[0], arraysShape[1]), dtype=int)
     holesWompuses = holesWompusesZeros.astype(bool)
+    for row in range(arraysShape[1]):
+        for col in range(arraysShape[2]):
+            holesWompuses[0] = True
+            holesWompuses[1] = True
+    
     return holesWompuses
     
     
@@ -90,6 +95,67 @@ def saveOutput(deduction, clausesArray, GROUP_ID, PUZZLE_PATH): # saves solved p
         
     return
 
+def testQuery(booleanStates, holesWompuses, arrows, query):
+    test1 = 0 # set 0, -1 for testing
+    knowledgeBase1 = Knowledge(booleanStates, holesWompuses, arrows, query, test1)
+    knowledgeBase1.initializeKnowledge()
+    Changed = True
+    
+    while Changed:
+        Changed = False
+        Changed = knowledgeBase1.resolveStatements()
+        if (Changed == -1):
+            print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
+            print(knowledgeBase1.getBooleanStates())
+            print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
+            print(knowledgeBase1.getHolesWompuses())
+            print("SAFE")
+            return "SAFE"
+        
+    print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
+    print(knowledgeBase1.getBooleanStates())
+    print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
+    print(knowledgeBase1.getHolesWompuses())
+    
+    print("remaining clauses:")
+    remainingClauses = knowledgeBase1.getClausesQueue()
+    for i in remainingClauses:
+        print(i)
+    
+    print("BREAKKKKKKKKKKKK")    
+        
+    
+    test0 = 1 # set 1
+    knowledgeBase0 = Knowledge(booleanStates, holesWompuses, arrows, query, test0)
+    knowledgeBase0.initializeKnowledge()
+    Changed = True
+    finalkb = knowledgeBase1.getKnowledgeBase()
+    #for i in finalkb:
+        #print(i)
+    
+    while Changed:
+        Changed = False
+        Changed = knowledgeBase0.resolveStatements()
+        if (Changed == -1):
+            print("UNSAFE")
+            return "UNSAFE"
+
+    print("0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given")
+    print(knowledgeBase0.getBooleanStates())
+    print("0) there could be a hole 1) there could be a wompus 2) there is a hole 3) there is a wompus")
+    print(knowledgeBase0.getHolesWompuses())
+    
+    print("remaining clauses:")
+    remainingClauses2 = knowledgeBase0.getClausesQueue()
+    #for i in remainingClauses2:
+        #print(i)
+    
+    print("RISKY")
+    return "RISKY"
+        
+    
+    
+
 def main(GROUP_ID, PUZZLE_PATH): 
     
     fileName = PUZZLE_PATH 
@@ -104,23 +170,10 @@ def main(GROUP_ID, PUZZLE_PATH):
     clausesArray = [] # placeholder
 
     holesWompuses = createHolesWompuses(booleanStates)
-    #print(booleanStates) # working correctly here
-    #print(holesWompuses) # working correctly here
-    
-    # NOTE: we still need to extract relevant
-    # tuple-formed literals from these initial visualization-style data structures
-    # BUT THIS SHOULD BE DONE INSIDE THE RECURSION
-    
-    # General structure: visual map => literals => logic pipeline => visual map => literals => ...
-    # NOTE: we will likely want an object to store our information in 
-    # so that it can be better tracked inside recursion
-    
-    # For FOL recursion, base-cases (to return up tree) will be:
-    # 1. if the query cell safe index is set TRUE
-    # 2. if the query cell unsafe index is set TRUE
-    # 3. if there is nowhere else to go logically via FOL
     
     
+    
+    deduction = testQuery(booleanStates, holesWompuses, arrows, query)
     # output stuff
     if (booleanStates[0][query[0]][query[1]] == True): 
         deduction = "SAFE" # if cell is safe, then it's safe
