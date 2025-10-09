@@ -45,6 +45,7 @@ def createMap(fileInfo): # initializes a properly sized array representing known
         # booleanStates[0][row][col] = True # cells 'visited' are always safe # maybe delete 
         booleanStates[4][row][col] = True # track given 
         # (part of knowledge base)
+    #print(booleanStates)
         
     return booleanStates
 
@@ -59,6 +60,7 @@ def retrieveOtherInfo(fileInfo):
     
     query = [int(queryLineInfo[-3]), int(queryLineInfo[-2])]
     query_arrows = (query, arrows)
+    #print(query_arrows)
     return query_arrows
     
 def createHolesWompuses(booleanStates):
@@ -130,8 +132,6 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
             Changed2 = knowledgeBase0.unifyForcedValues()
         else:
             knowledgeBase0.unifyForcedValues()
-    
-    remainingClauses = knowledgeBase1.getClausesArray() + knowledgeBase0.getClausesArray()
     print("OPERATIONS NEEDED = " + str(knowledgeBase0.getRunCount() + knowledgeBase1.getRunCount()))
     print("RISKY")
     return ("RISKY", remainingClauses)

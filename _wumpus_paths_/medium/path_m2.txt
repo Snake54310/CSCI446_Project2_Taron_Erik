@@ -1,4 +1,4 @@
-GRID: 25x25
+GRID: 8x8
 ARROWS: 2
 PATH:
 (0,0)  B:F S:F

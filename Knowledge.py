@@ -11,8 +11,10 @@ class Knowledge:
         self.booleanStates = cp.deepcopy(booleanStates); #  this boolean states array contains 
         # booleans variables on the following data: 
         # 0) safe, 1) unsafe, 2) breeze, 3) stench, 4) given
+        #arrows = 2
         
         self.arrows = arrows # number of potential wompuses
+        self.remainingWompuses = cp.copy(arrows)
         
         self.query = query # cell we are testing
         
@@ -37,6 +39,13 @@ class Knowledge:
         
         self.runCount = 0
         
+        minimumWompusZeros = np.zeros((self.rows, self.columns), dtype=int)
+                
+        self.minimumWompusSet = minimumWompusZeros.astype(bool)
+        for i in range(self.rows):
+            for l in range(self.columns):
+                self.minimumWompusSet[i][l] = True
+        self.minimumWompusSize = (self.rows * self.columns)
         
         
         # EXPLANATION OF VARIABLES AND CONSTANTS:
@@ -78,6 +87,8 @@ class Knowledge:
         return self.clausesQueue
     def getRunCount(self):
         return self.runCount
+    def getMinimumWompus(self):
+        return (self.minimumWompusSet, self.minimumWompusSize)
         
     
         # END OUTPUT METHODS -------------------------------------------------
@@ -179,6 +190,58 @@ class Knowledge:
     def equalsArrowsWompus(self, cell): # CODE: 'EAW' // constant if True or if cell does not need (BECAUSE could not have) wompus
         needWompus = ((self.arrows == self.possibleWompuses) and self.couldWompus(cell))
         return needWompus
+    
+    
+    def minimumWompus(self, cell): # CODE:# 'MW' // constant if False
+        #print("EVALUATED MW")
+        row = cell[0]
+        column = cell[1]
+        return (self.minimumWompusSet[row][column])
+        
+    def minimumSizeMatch(self, cell): # CODE: 'MSM' // constant if True, cannot be set
+        #print("EVALUATED MSM")
+        #print(self.arrows)
+        #print("----------")
+        #print(self.minimumWompusSize == self.remainingWompuses)
+        #print(self.minimumWompusSize)
+        #print(self.remainingWompuses)
+        
+        return (self.minimumWompusSize >= self.remainingWompuses)
+    
+    def hadAdjacentWompus(self, cell): # CODE: 'HAW' // constant if True, cannot be set
+        row = cell[0]
+        column = cell[1]
+        
+        if (row + 1 < self.rows):
+            cell1 = [row + 1, column]
+            #print(cell1)
+            isWompus = self.isWompus(cell1)
+            if (isWompus):
+                return True
+            
+        if (row - 1 >= 0):
+            cell1 = [row - 1, column]
+            #print(cell1)
+            isWompus = self.isWompus(cell1)
+            if (isWompus):
+                return True
+                
+        if (column + 1 < self.columns):
+            cell1 = [row, column + 1]
+            #print(cell1)
+            isWompus = self.isWompus(cell1)
+            if (isWompus):
+                return True
+                
+        if (column - 1 >= 0):
+            cell1 = [row, column - 1]
+            #print(cell1)
+            isWompus = self.isWompus(cell1)
+            if (isWompus):
+                return True
+            
+        return False
+    
         
     
     def isConstant(self, element): # no code likely needed -- called during unification and resolution
@@ -214,8 +277,15 @@ class Knowledge:
             result = ((not self.couldWompus(cell)) or self.isWompus(cell)) # or (not self.atCapacity())
             return result
         elif code == 'EAW': # constant if True or if cell does not need (could not have)wompus
-            return (self.equalsArrows(cell) or not self.couldWompus(cell)) 
-        
+            return self.arrows <= 0 #(self.equalsArrows(cell) or not self.couldWompus(cell)) 
+        elif code == 'MW':
+            result = not self.minimumWompus(cell)
+            return result
+        elif code == 'MSM':
+            return self.minimumSizeMatch(cell)
+        elif code == 'HAW':
+            return self.hadAdjacentWompus(cell)
+            
         return False
     
     def evaluateCellCall(self, element):
@@ -243,6 +313,12 @@ class Knowledge:
             return self.cellWithinCapacity(cell)
         elif code == 'EAW':
             return self.equalsArrows(cell) 
+        elif code == 'MW':
+            return self.minimumWompus(cell)
+        elif code == 'MSM':
+            return self.minimumSizeMatch(cell)
+        elif code == 'HAW':
+            return self.hadAdjacentWompus(cell)
         
         #print(element)
         #print("EVALUATE CELL CALL INVALID")
@@ -371,8 +447,11 @@ class Knowledge:
         elif code == 'CH': 
             self.holesWompuses[0][row][column] = False
         elif code == 'IW': 
+            #print("set Wompus AT: " + str(cell))
             self.holesWompuses[3][row][column] = True
             self.arrows = (self.arrows - 1)
+            self.remainingWompuses = (self.remainingWompuses - 1)
+            #print("remaining " + str(self.remainingWompuses))
             self.possibleWompuses = (self.possibleWompuses - 1) # must also decrease number of required wompuses remaining
             # otherwise, setting cell as wompus when rule is being reinforced (partially) stops the rule from being reinforced.
         elif code == 'IH': 
@@ -385,6 +464,20 @@ class Knowledge:
             # - ONLY APPEARS IN TOP OF QUEUE AS PART OF 'OR' STATEMENT, AND IS NOTTED
             # - ALWAYS CONSTANT IF TRUE, NOT TRUE == FALSE, SO RETURN FAILURE INSTEAD OF ATTEMPTING SET
             print("ERROR: SHOULD NEVER ATTEMPT SET ON EAW")
+        elif code == 'MW':
+            self.minimumWompusSize = (self.minimumWompusSize - 1) 
+            #print("removed " + str(self.minimumWompusSize))
+            self.minimumWompusSet[row][column] = False
+        elif code == 'MSM':
+            # THIS IS NEVER SET BECAUSE:
+            # - ONLY APPEARS IN TOP OF QUEUE AS PART OF 'OR' STATEMENT, AND IS NOTTED
+            # - ALWAYS CONSTANT IF TRUE, NOT TRUE == FALSE, SO RETURN FAILURE INSTEAD OF ATTEMPTING SET
+            print("ERROR: SHOULD NEVER ATTEMPT SET ON MSM")
+            
+        elif code == 'HAW':
+            print("ERROR: SHOULD NEVER ATTEMPT SET ON HAW")
+            
+        
             
         return
         
@@ -445,6 +538,8 @@ class Knowledge:
         self.clausesQueue += self.arrowsCount(cell)
         self.clausesQueue += self.stenchRule(cell)
         self.clausesQueue += self.breezeRule(cell)
+        self.clausesQueue += self.minWompusRule(cell)
+        self.clausesQueue += self.minWompusSet(cell)
         # self.clausesQueue += ...
         # ...
         return
@@ -592,10 +687,8 @@ class Knowledge:
             addTuple = alteredTuple
             
         if addTuple != None:
-            #addKnowledge.append(self.iffMethod(('HS', cell), addTuple))
             addKnowledge.append(self.impliesMethod(('HS', cell), addTuple))
             
-        # print(addKnowledge[0])
         return addKnowledge
     
     # 11. if cell has breeze, then at least one adjacent cell has hole
@@ -651,7 +744,131 @@ class Knowledge:
         # this must be true--or made true--for all cells
         addKnowledge.append(arrowCountRule)
         return addKnowledge
+    # 13 and 14. if cell is part of set [cells that could have wompus AND have 2 or more adjacent 
+    # stenches which are not adjacent to a wompus], Then (if the size of that set is equal to the number of arrows, then all members
+    # have wompuses)
+    def minWompusSet(self, cell):
+        addKnowledge = []
+        row = cell[0]
+        column = cell[1]
+        
+        addKnowledge = []
+        minSetElement = None
+        if (row + 1 < self.rows):
+            row1 = row + 1
+            if (row - 1 >= 0):
+                row2 = row - 1
+                twoMoreNeighbors = ('AND', ('HS', [row1, column]), ('HS', [row2, column])) # two neighbors with stench
+                couldWompus = ('CW', cell) # cell could wompus
+                neighborNeighborNotWompus = ('NOT', ('OR', ('HAW', [row1, column]), ('HAW', [row2, column])))
+                
+                condition = ('AND', ('AND', twoMoreNeighbors, neighborNeighborNotWompus), couldWompus)
+                
+                alteredTuple = None
+                if minSetElement == None:
+                    alteredTuple = condition
+                else:
+                    alteredTuple = ('OR', minSetElement, condition)
+                minSetElement = alteredTuple
+                
+            if (column + 1 < self.columns):
+                column2 = column + 1
+                twoMoreNeighbors = ('AND', ('HS', [row1, column]), ('HS', [row, column2])) # two neighbors with stench
+                couldWompus = ('CW', cell) # cell could wompus
+                neighborNeighborNotWompus = ('NOT', ('OR', ('HAW', [row1, column]), ('HAW', [row, column2])))
+                
+                condition = ('AND', ('AND', twoMoreNeighbors, neighborNeighborNotWompus), couldWompus)
+                
+                alteredTuple = None
+                if minSetElement == None:
+                    alteredTuple = condition
+                else:
+                    alteredTuple = ('OR', minSetElement, condition)
+                minSetElement = alteredTuple
+                
+                
+            if (column - 1 >= 0):
+                column2 = column - 1
+                twoMoreNeighbors = ('AND', ('HS', [row1, column]), ('HS', [row, column2])) # two neighbors with stench
+                couldWompus = ('CW', cell) # cell could wompus
+                neighborNeighborNotWompus = ('NOT', ('OR', ('HAW', [row1, column]), ('HAW', [row, column2])))
+                
+                condition = ('AND', ('AND', twoMoreNeighbors, neighborNeighborNotWompus), couldWompus)
+                
+                alteredTuple = None
+                if minSetElement == None:
+                    alteredTuple = condition
+                else:
+                    alteredTuple = ('OR', minSetElement, condition)
+                minSetElement = alteredTuple
+                
+        if (row - 1 >= 0):
+            row1 = row - 1
+            if (column + 1 < self.columns):
+                column2 = column + 1
+                twoMoreNeighbors = ('AND', ('HS', [row1, column]), ('HS', [row, column2])) # two neighbors with stench
+                couldWompus = ('CW', cell) # cell could wompus
+                neighborNeighborNotWompus = ('NOT', ('OR', ('HAW', [row1, column]), ('HAW', [row, column2])))
+                
+                condition = ('AND', ('AND', twoMoreNeighbors, neighborNeighborNotWompus), couldWompus)
+                
+                alteredTuple = None
+                if minSetElement == None:
+                    alteredTuple = condition
+                else:
+                    alteredTuple = ('OR', minSetElement, condition)
+                minSetElement = alteredTuple
+                
+            if (column - 1 >= 0):
+                column2 = column - 1
+                twoMoreNeighbors = ('AND', ('HS', [row1, column]), ('HS', [row, column2])) # two neighbors with stench
+                couldWompus = ('CW', cell) # cell could wompus
+                neighborNeighborNotWompus = ('NOT', ('OR', ('HAW', [row1, column]), ('HAW', [row, column2])))
+                
+                condition = ('AND', ('AND', twoMoreNeighbors, neighborNeighborNotWompus), couldWompus)
+                
+                alteredTuple = None
+                if minSetElement == None:
+                    alteredTuple = condition
+                else:
+                    alteredTuple = ('OR', minSetElement, condition)
+                minSetElement = alteredTuple
+                
+                
+        if (column + 1 < self.columns):
+            column1 = column + 1
+            if (column - 1 >= 0):
+                column2 = column - 1
+                twoMoreNeighbors = ('AND', ('HS', [row, column1]), ('HS', [row, column2])) # two neighbors with stench
+                couldWompus = ('CW', cell) # cell could wompus
+                neighborNeighborNotWompus = ('NOT', ('OR', ('HAW', [row, column1]), ('HAW', [row, column2])))
+                
+                condition = ('AND', ('AND', twoMoreNeighbors, neighborNeighborNotWompus), couldWompus)
+                
+                alteredTuple = None
+                if minSetElement == None:
+                    alteredTuple = condition
+                else:
+                    alteredTuple = ('OR', minSetElement, condition)
+                minSetElement = alteredTuple
+            
+        if minSetElement != None:
+            # addKnowledge.append(self.iffMethod(('HB', cell), addTuple))
+            addKnowledge.append(self.iffMethod(minSetElement, ('MW', cell)))
+            
+        
+        return addKnowledge
     
+    def minWompusRule(self, cell):
+        
+        addKnowledge = []
+        row = cell[0]
+        column = cell[1] # if the size of that set is equal to the number of arrows, then all members have wompuses
+        minConfirmation = self.impliesMethod(('AND', ('MSM', cell), ('NOT', ('MW', cell))), ('NOT', ('CW', cell)))
+        
+        addKnowledge.append(minConfirmation)
+        return addKnowledge
+        
     
     # (neighbor1hole OR neighbor2hole OR neighbor3hole OR neighbor4hole)
     
@@ -757,6 +974,9 @@ class Knowledge:
                         print("original: " + str(clause))
                 
                 isConstantValue = self.isConstant(currentClause)
+                
+                if (currentClause[0] == 'MSM'):
+                    print("EVALUATED MSM FROM TOP")
                 
                 if(isConstantValue): # if constant
                     resultingValue = self.evaluateCellCall(currentClause) # check consistency
