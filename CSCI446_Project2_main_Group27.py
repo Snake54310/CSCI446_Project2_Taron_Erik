@@ -132,6 +132,8 @@ def testQuery(booleanStates, holesWompuses, arrows, query):
             Changed2 = knowledgeBase0.unifyForcedValues()
         else:
             knowledgeBase0.unifyForcedValues()
+            
+    remainingClauses = knowledgeBase1.getClausesArray() + knowledgeBase0.getClausesArray()
     print("OPERATIONS NEEDED = " + str(knowledgeBase0.getRunCount() + knowledgeBase1.getRunCount()))
     print("RISKY")
     return ("RISKY", remainingClauses)

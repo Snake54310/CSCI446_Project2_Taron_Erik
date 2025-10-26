@@ -206,7 +206,7 @@ class Knowledge:
         #print(self.minimumWompusSize)
         #print(self.remainingWompuses)
         
-        return (self.minimumWompusSize >= self.remainingWompuses)
+        return (self.minimumWompusSize == self.remainingWompuses)
     
     def hadAdjacentWompus(self, cell): # CODE: 'HAW' // constant if True, cannot be set
         row = cell[0]
@@ -277,7 +277,7 @@ class Knowledge:
             result = ((not self.couldWompus(cell)) or self.isWompus(cell)) # or (not self.atCapacity())
             return result
         elif code == 'EAW': # constant if True or if cell does not need (could not have)wompus
-            return self.arrows <= 0 #(self.equalsArrows(cell) or not self.couldWompus(cell)) 
+            return self.arrows == 0 #(self.equalsArrows(cell) or not self.couldWompus(cell)) 
         elif code == 'MW':
             result = not self.minimumWompus(cell)
             return result
@@ -450,7 +450,8 @@ class Knowledge:
             #print("set Wompus AT: " + str(cell))
             self.holesWompuses[3][row][column] = True
             self.arrows = (self.arrows - 1)
-            self.remainingWompuses = (self.remainingWompuses - 1)
+            # self.remainingWompuses = (self.remainingWompuses - 1) # IF WE STOP TRYING TO INCLUDE EXISTING WOMPUSES IN THE MINIMUM SET,
+            # THEN UNCOMMENT THIS!!!
             #print("remaining " + str(self.remainingWompuses))
             self.possibleWompuses = (self.possibleWompuses - 1) # must also decrease number of required wompuses remaining
             # otherwise, setting cell as wompus when rule is being reinforced (partially) stops the rule from being reinforced.
@@ -481,9 +482,6 @@ class Knowledge:
             
         return
         
-    
-    
-    
     
     
         # END MAP COMMAND OPERATIONS -------------------------------------------------
@@ -538,8 +536,9 @@ class Knowledge:
         self.clausesQueue += self.arrowsCount(cell)
         self.clausesQueue += self.stenchRule(cell)
         self.clausesQueue += self.breezeRule(cell)
-        self.clausesQueue += self.minWompusRule(cell)
-        self.clausesQueue += self.minWompusSet(cell)
+        #self.clausesQueue += self.minWompusRule(cell)
+        #self.clausesQueue += self.minWompusSet(cell) # this line can be commented out to solve 10/12, or not commented to solve
+        # e3 and m2. I'm sure it's just a small bug left overconstraining things
         # self.clausesQueue += ...
         # ...
         return
@@ -855,6 +854,11 @@ class Knowledge:
         if minSetElement != None:
             # addKnowledge.append(self.iffMethod(('HB', cell), addTuple))
             addKnowledge.append(self.iffMethod(minSetElement, ('MW', cell)))
+        
+        isWompusInSet = self.impliesMethod(('IW', cell), ('MW', cell)) # IF WE STOP TRYING TO INCLUDE EXISTING WOMPUSES IN THE MINIMUM SET,
+        # COMMENT THIS LINE
+        
+        addKnowledge.append(isWompusInSet) # THIS IS THE SECOND LINE TO COMMENT
             
         
         return addKnowledge
@@ -864,7 +868,11 @@ class Knowledge:
         addKnowledge = []
         row = cell[0]
         column = cell[1] # if the size of that set is equal to the number of arrows, then all members have wompuses
-        minConfirmation = self.impliesMethod(('AND', ('MSM', cell), ('NOT', ('MW', cell))), ('NOT', ('CW', cell)))
+        minConfirmation = self.impliesMethod(('MSM', cell), self.impliesMethod(('NOT', ('MW', cell)), ('NOT', ('CW', cell))))
+        # THIS OVERCONSTRAINS FOR NORMAL PUZZLES BECAUSE IT SAYS ANY CELL NOT PART OF THE SET CANNOT BE A WOMPUS, BUT WE ONLY
+        # WANT TO CONSTRAIN CELLS THAT DO NOT HAVE WOMPUS THUS FAR. MAYBE GO BACK AND INCLUDE CELLS THAT DO HAVE A WOMPUS IN THE
+        # SET IN THE PREVIOUS METHOD
+        
         
         addKnowledge.append(minConfirmation)
         return addKnowledge
@@ -916,10 +924,12 @@ class Knowledge:
 
                 # VALUES NEVER CONSTANT--THIS PERFORMED APART FROM RESOLUTION
                 #print(currentClause)
-                resultingValue = self.evaluateCellCall(currentClause)
+                # CONSIDER: IF currentClause[0] == 'MSM', MAYBE DON'T RUN!!
+                if currentClause[0] != 'MSM':
+                    resultingValue = self.evaluateCellCall(currentClause)
 
-                replacements.update({str(currentClause) : targetValue})
-                performedUnify = True
+                    replacements.update({str(currentClause) : targetValue})
+                    performedUnify = True
 
             else:
                 pass # if not correct type of expression, no replacement is found
@@ -974,9 +984,9 @@ class Knowledge:
                         print("original: " + str(clause))
                 
                 isConstantValue = self.isConstant(currentClause)
-                
+                '''
                 if (currentClause[0] == 'MSM'):
-                    print("EVALUATED MSM FROM TOP")
+                    print("EVALUATED MSM FROM TOP")'''
                 
                 if(isConstantValue): # if constant
                     resultingValue = self.evaluateCellCall(currentClause) # check consistency
